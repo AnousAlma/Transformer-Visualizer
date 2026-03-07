@@ -35,5 +35,6 @@ async def health_check():
     return {
         "status": "healthy",
         "model_loaded": model_manager.is_loaded(),
-        "model_name": LANGUAGE_MODELS[settings.default_language]
+        "current_language": model_manager.curr_language,
+        "current_model": LANGUAGE_MODELS[model_manager.curr_language]
     }

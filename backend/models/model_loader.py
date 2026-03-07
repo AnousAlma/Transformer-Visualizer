@@ -8,6 +8,7 @@ class ModelManager:
     def __init__(self):
         self.models: dict[str, HookedTransformer] = {}
         self.device: str = "cpu"
+        self.curr_language: Optional[str] = None
     
     def load_model(self, language: str = "en", device: str = "cpu"):
         # skip loading if model is already loaded
@@ -29,6 +30,7 @@ class ModelManager:
         # ensure model is loaded before returning
         if language not in self.models:
             raise RuntimeError("Model not loaded. Call load_model first.")
+        self.curr_language = language
         return self.models[language]
     
     def is_loaded(self, language: str = "en") -> bool:
