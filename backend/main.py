@@ -3,10 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from config import settings
-from models.model_loader import model_manager
-from routes.inference import router as inference_router
-
 from models.model_loader import model_manager, LANGUAGE_MODELS
+from routes.inference import router as inference_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
