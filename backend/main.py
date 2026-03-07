@@ -10,6 +10,7 @@ from routes.inference import router as inference_router
 async def lifespan(app: FastAPI):
     # load model on startup
     model_manager.load_model(language="en", device=settings.device)
+    model_manager.load_model(language="fr", device=settings.device)
     yield
     # cleanup model on shutdown
     model_manager.models = {}
