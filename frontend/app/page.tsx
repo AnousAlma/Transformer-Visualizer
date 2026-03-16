@@ -175,6 +175,7 @@ export default function Home() {
               stepIndex={stepIndex}
               setStepIndex={setStepIndex}
               inputText={inputText}
+              layer={layer}
             />
           )}
 

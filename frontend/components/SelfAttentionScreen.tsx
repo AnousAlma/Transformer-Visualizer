@@ -6,56 +6,60 @@ import FlowArrow from "./FlowArrow"
 export default function SelfAttentionScreen({
   stepIndex,
   setStepIndex,
-  inputText
+  inputText,
+  layer
 }:{
   stepIndex:number
   setStepIndex:(n:number)=>void
   inputText:string
+  layer:number
 }){
 
-const tokens =
-  inputText.trim().length > 0
-    ? inputText.split(/\s+/)
-    : []
+const [tokens,setTokens] = useState<string[]>([])
+const [attentionMatrix,setAttentionMatrix] = useState<number[][]>([])
 
-const [queryToken,setQueryToken] = useState(0)
+const [queryToken,setQueryToken] = useState(1)
+const [head,setHead] = useState(0)
 
-/* reset selected token if input changes */
+/* reset token when input changes */
 useEffect(()=>{
-  setQueryToken(0)
+  setQueryToken(1)
 },[inputText])
 
-/* deterministic attention generator */
-function generateAttention(tokens:string[]){
+/* fetch attention from backend */
+async function fetchAttention(){
 
-  const matrix:number[][] = []
+  if(!inputText) return
 
-  tokens.forEach((token,i)=>{
+  try{
 
-    const row:number[] = []
-
-    tokens.forEach((_,j)=>{
-
-      let seed = token.charCodeAt(0) + j * 13 + i * 7
-      const value = Math.abs(Math.sin(seed)) + 0.1
-
-      row.push(value)
-
+    const res = await fetch("http://localhost:8000/v1/attention",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        text:inputText,
+        layer:layer-1,
+        head:head,
+        language:"en"
+      })
     })
 
-    const sum = row.reduce((a,b)=>a+b,0)
+    const data = await res.json()
 
-    matrix.push(row.map(v=>v/sum))
+    setTokens(data.tokens)
+    setAttentionMatrix(data.patterns[0].attention_matrix)
 
-  })
-
-  return matrix
+  }catch(err){
+    console.error("attention fetch failed",err)
+  }
 }
 
-const attentionMatrix =
-  tokens.length > 0
-    ? generateAttention(tokens)
-    : []
+/* refetch when text or head changes */
+useEffect(()=>{
+  fetchAttention()
+},[inputText,head,layer])
 
 const activeToken = tokens[queryToken] ?? ""
 
@@ -69,51 +73,76 @@ return(
 CLICK A QUERY TOKEN TO SEE HOW MUCH IT ATTENDS TO EACH OTHER TOKEN
 </p>
 
+{/* HEAD SWITCH */}
+<div className="flex items-center gap-4">
+
+<button
+onClick={()=>setHead(Math.max(0, head-1))}
+className="px-3 py-1 rounded bg-[#1c1c1f] hover:bg-[#2a2a2e]"
+>
+◀
+</button>
+
+<div className="text-zinc-300 text-sm">
+Head {head+1} / 12
+</div>
+
+<button
+onClick={()=>setHead(Math.min(11, head+1))}
+className="px-3 py-1 rounded bg-[#1c1c1f] hover:bg-[#2a2a2e]"
+>
+▶
+</button>
+
+</div>
+
+{/* TOKENS */}
 <div className="flex flex-wrap gap-3">
 
-{tokens.map((token,i)=>(
+{tokens.slice(1).map((token,i)=>{
+
+const realIndex = i + 1
+
+return(
 <button
-key={i}
-onClick={()=>setQueryToken(i)}
+key={realIndex}
+onClick={()=>setQueryToken(realIndex)}
 className={`px-4 py-2 rounded-lg ${
-queryToken === i
+queryToken === realIndex
 ? "bg-purple-600"
 : "bg-[#1c1c1f]"
 }`}
 >
 {token}
 </button>
-))}
+)
+
+})}
 
 </div>
 
 <FlowArrow/>
 
+{/* ATTENTION PROCESS */}
 <div className="flex items-center justify-center gap-4 text-sm flex-wrap">
 
 <div className="px-3 py-2 bg-red-500/20 text-red-300 rounded font-mono">
 Q_{activeToken}
 </div>
 
-<div className="text-zinc-500 text-lg">
-·
-</div>
+<div className="text-zinc-500 text-lg">·</div>
 
 <div className="px-3 py-2 bg-blue-500/20 text-blue-300 rounded font-mono">
 K_tokensᵀ
 </div>
 
-<div className="text-zinc-500 text-lg">
-→
-</div>
+<div className="text-zinc-500 text-lg">→</div>
 
 <div className="px-3 py-2 bg-purple-500/20 text-purple-300 rounded font-mono">
 Scores
 </div>
 
-<div className="text-zinc-500 text-lg">
-→
-</div>
+<div className="text-zinc-500 text-lg">→</div>
 
 <div className="px-3 py-2 bg-purple-600/30 text-purple-300 rounded font-mono">
 Softmax
@@ -122,18 +151,20 @@ Softmax
 </div>
 
 <div className="text-sm text-zinc-400">
-Attention weights for "{activeToken}":
+Attention weights for "{activeToken}" (Head {head+1})
 </div>
 
+{/* ATTENTION BARS */}
 <div className="flex flex-col gap-3">
 
-{tokens.map((token,i)=>{
+{tokens.slice(1).map((token,i)=>{
 
-const value = attentionMatrix[queryToken]?.[i] ?? 0
+const realIndex = i + 1
+const value = attentionMatrix[queryToken]?.[realIndex] ?? 0
 
 return(
 
-<div key={i} className="flex items-center gap-4">
+<div key={realIndex} className="flex items-center gap-4">
 
 <span className="w-20">{token}</span>
 
@@ -160,6 +191,7 @@ style={{width:`${value*100}%`}}
 
 
 
+{/* SIDE PANEL */}
 <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col h-full">
 
 <div className="flex flex-col gap-4">
