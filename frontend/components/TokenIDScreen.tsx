@@ -15,14 +15,12 @@ export default function TokenIDScreen({
   
       <div className="grid grid-cols-[2fr_1fr] gap-10">
   
-        {/* LEFT SIDE */}
         <div className="flex flex-col items-center gap-8">
   
           <div className="text-zinc-400 text-sm text-center">
             EACH TOKEN IS GIVEN A UNIQUE ID THAT CORRESPONDS TO A ROW IN THE EMBEDDING MATRIX
           </div>
   
-          {/* TOKENS */}
           <div className="flex flex-wrap justify-center gap-4 max-w-3xl">
   
             {tokens.map((token, i) => (
@@ -38,7 +36,6 @@ export default function TokenIDScreen({
           </div>
   
   
-          {/* FLOW */}
           <div className="flex flex-col items-center gap-4">
   
             <FlowArrow/>
@@ -47,7 +44,6 @@ export default function TokenIDScreen({
               These IDs index into the embedding matrix
             </div>
   
-            {/* MATRIX */}
             <div className="bg-[#151517] border border-[#2a2a2e] rounded-lg p-4 flex flex-col gap-2">
   
               <div className="text-xs text-zinc-500 mb-2">
@@ -89,7 +85,6 @@ export default function TokenIDScreen({
         </div>
   
   
-        {/* RIGHT PANEL */}
         <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col">
   
           <div className="flex flex-col gap-4">
@@ -113,7 +108,6 @@ export default function TokenIDScreen({
   
           </div>
   
-          {/* NEXT BUTTON */}
           <div className="flex justify-end mt-auto pt-6">
   
             <button

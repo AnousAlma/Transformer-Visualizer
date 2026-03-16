@@ -25,14 +25,12 @@ export default function Embedding(
 
     <div className="grid grid-cols-[2fr_1fr] gap-10">
 
-      {/* LEFT SIDE */}
       <div className="flex flex-col items-center gap-8">
 
         <div className="text-zinc-400 text-sm text-center">
           CLICK A TOKEN TO INSPECT ITS EMBEDDING VECTOR
         </div>
 
-        {/* TOKEN SELECTOR */}
         <div className="flex flex-wrap justify-center gap-4 max-w-3xl">
 
           {tokens.map((t,i)=>(
@@ -58,7 +56,6 @@ export default function Embedding(
         </div>
 
 
-        {/* VECTOR BARS */}
         <div className="flex flex-col gap-3 w-full max-w-3xl">
 
           {embedding.map((v,i)=>{
@@ -93,7 +90,6 @@ export default function Embedding(
 
       </div>
 
-        {/* RIGHT PANEL */}
         <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col">
 
         <div className="flex flex-col gap-4">
@@ -118,7 +114,6 @@ export default function Embedding(
 
         </div>
 
-        {/* NEXT BUTTON */}
         <div className="flex justify-end mt-auto pt-6">
 
         <button

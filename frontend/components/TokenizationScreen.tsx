@@ -14,7 +14,6 @@ export default function TokenizationScreen({
   
       <div className="grid grid-cols-[2fr_1fr] gap-10">
   
-        {/* LEFT SIDE */}
         <div className="flex flex-col items-center gap-8">
   
           <div className="text-zinc-500 text-sm w-full text-left">
@@ -31,7 +30,6 @@ export default function TokenizationScreen({
             TOKENS ({tokens.length})
           </div>
   
-          {/* TOKENS */}
           <div className="flex flex-wrap justify-center gap-4 max-w-3xl">
   
             {tokens.map((token, i) => (
@@ -48,7 +46,6 @@ export default function TokenizationScreen({
         </div>
   
   
-        {/* RIGHT PANEL */}
         <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col gap-4">
   
           <h2 className="text-xl font-semibold">
@@ -64,7 +61,6 @@ export default function TokenizationScreen({
             Input → [t1, t2, … t{tokens.length}]
           </div>
   
-          {/* NEXT BUTTON */}
           <div className="flex justify-end pt-6">
   
             <button

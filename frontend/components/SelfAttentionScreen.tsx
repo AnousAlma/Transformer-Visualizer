@@ -54,8 +54,6 @@ queryToken === i
 
 <FlowArrow/>
 
-{/* NEW QK EXPLANATION STRIP */}
-
 <div className="flex items-center justify-center gap-4 text-sm">
 
 <div className="px-3 py-2 bg-red-500/20 text-red-300 rounded font-mono">
@@ -126,7 +124,6 @@ style={{width:`${value*100}%`}}
 </div>
 
 
-{/* RIGHT PANEL */}
 
 <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col h-full">
 

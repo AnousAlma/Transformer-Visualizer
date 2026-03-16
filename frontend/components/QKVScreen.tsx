@@ -16,7 +16,6 @@ export default function QKVScreen(
 const tokens = ["The","transformer","model","processes"]
 const [selectedToken,setSelectedToken] = useState(0)
 
-/* preview values for QKV */
 const Q = [0.3,0.8,0.1,0.6,0.1]
 const K = [0.4,0.9,0.2,0.7,0.2]
 const V = [0.5,0.8,0.2,0.7,0.3]
@@ -38,14 +37,12 @@ return (
 
 <div className="grid grid-cols-[2fr_1fr] gap-10">
 
-{/* LEFT SIDE */}
 <div className="flex flex-col items-center gap-5">
 
 <div className="text-zinc-400 text-sm text-center">
 CLICK A TOKEN TO SEE HOW ITS EMBEDDING PRODUCES Q, K, V
 </div>
 
-{/* TOKENS */}
 <div className="flex flex-wrap justify-center gap-4 max-w-3xl">
 
 {tokens.map((t,i)=>(
@@ -66,7 +63,6 @@ selectedToken === i
 
 <FlowArrow />
 
-{/* EMBEDDING NODE */}
 
 <div className="px-5 py-2 bg-purple-600/20 border border-purple-600 rounded text-purple-300 text-sm font-mono">
 Embedding X (768)
@@ -74,11 +70,9 @@ Embedding X (768)
 
 <FlowArrow />
 
-{/* PROJECTION */}
 
 <div className="grid grid-cols-3 gap-6 items-start mt-2">
 
-{/* WQ */}
 <div className="flex flex-col items-center gap-2">
 
 <div className="text-sm text-zinc-400 font-mono">
@@ -97,7 +91,6 @@ Q
 
 </div>
 
-{/* WK */}
 <div className="flex flex-col items-center gap-2">
 
 <div className="text-sm text-zinc-400 font-mono">
@@ -116,7 +109,6 @@ K
 
 </div>
 
-{/* WV */}
 <div className="flex flex-col items-center gap-2">
 
 <div className="text-sm text-zinc-400 font-mono">
@@ -140,7 +132,6 @@ V
 </div>
 
 
-{/* RIGHT PANEL */}
 
 <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col h-full">
 
