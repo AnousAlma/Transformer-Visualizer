@@ -127,9 +127,19 @@ export default function Embedding({
             X ∈ ℝ^(n×768)
           </div>
 
-          <div className="border-l-2 border-purple-500 pl-4 text-zinc-400 text-sm">
-            Purple bars = positive dims, orange = negative. Intensity shows magnitude.
-          </div>
+          <div className="flex items-center gap-4 text-zinc-400 text-sm">
+
+            <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-purple-500" />
+                <span>Positive dimensions</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-orange-400" />
+                <span>Negative dimensions</span>
+            </div>
+
+            </div>
 
         </div>
 

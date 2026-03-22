@@ -21,12 +21,10 @@ const [attentionMatrix,setAttentionMatrix] = useState<number[][]>([])
 const [queryToken,setQueryToken] = useState(1)
 const [head,setHead] = useState(0)
 
-/* reset token when input changes */
 useEffect(()=>{
   setQueryToken(1)
 },[inputText])
 
-/* fetch attention from backend */
 async function fetchAttention(){
 
   if(!inputText) return
@@ -56,7 +54,6 @@ async function fetchAttention(){
   }
 }
 
-/* refetch when text or head changes */
 useEffect(()=>{
   fetchAttention()
 },[inputText,head,layer])
@@ -70,10 +67,9 @@ return(
 <div className="flex flex-col gap-6">
 
 <p className="text-zinc-400 text-sm">
-CLICK A QUERY TOKEN TO SEE HOW MUCH IT ATTENDS TO EACH OTHER TOKEN
+CLICK A TOKEN TO SEE WHICH OTHER TOKENS IT PAYS ATTENTION TO
 </p>
 
-{/* HEAD SWITCH */}
 <div className="flex items-center gap-4">
 
 <button
@@ -96,7 +92,6 @@ className="px-3 py-1 rounded bg-[#1c1c1f] hover:bg-[#2a2a2e]"
 
 </div>
 
-{/* TOKENS */}
 <div className="flex flex-wrap gap-3">
 
 {tokens.slice(1).map((token,i)=>{
@@ -123,7 +118,6 @@ queryToken === realIndex
 
 <FlowArrow/>
 
-{/* ATTENTION PROCESS */}
 <div className="flex items-center justify-center gap-4 text-sm flex-wrap">
 
 <div className="px-3 py-2 bg-red-500/20 text-red-300 rounded font-mono">
@@ -191,7 +185,6 @@ style={{width:`${value*100}%`}}
 
 
 
-{/* SIDE PANEL */}
 <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col h-full">
 
 <div className="flex flex-col gap-4">
@@ -207,6 +200,10 @@ The resulting scores are normalized with softmax to produce
 attention weights.
 </p>
 
+<p className="text-zinc-400 text-sm leading-relaxed">
+Attention weights show how important each token is when processing the selected token.
+Higher weights mean the model focuses more on that token.
+</p>
 <div className="bg-[#1c1c1f] p-3 rounded text-sm font-mono">
 weights = softmax(QKᵀ / √dₖ)
 </div>

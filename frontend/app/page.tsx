@@ -7,7 +7,9 @@ import TokenIDScreen from "@/components/TokenIDScreen"
 import Embedding from "@/components/Embedding"
 import QKVScreen from "@/components/QKVScreen"
 import SelfAttentionScreen from "@/components/SelfAttentionScreen"
-
+import AttentionOutScreen from "@/components/AttentionOutScreen"
+import MLPScreen from "@/components/MLPResidual"
+import ProbabilitiesScreen from "@/components/OutputScreen"
 export default function Home() {
 
   const steps = [
@@ -16,6 +18,7 @@ export default function Home() {
     "Embeddings",
     "QKV",
     "Self-Attention",
+    "Attention Out",
     "MLP",
     "Output"
   ]
@@ -178,6 +181,23 @@ export default function Home() {
               layer={layer}
             />
           )}
+          {stepIndex === 5 && (
+            <AttentionOutScreen
+              stepIndex={stepIndex}
+              setStepIndex={setStepIndex}
+              inputText={inputText}
+            />)}
+          {stepIndex === 6 &&  (
+            <MLPScreen
+            stepIndex={stepIndex}
+            setStepIndex={setStepIndex}
+            inputText={inputText} 
+            />)}
+          
+          {stepIndex === 7 && (
+            <ProbabilitiesScreen
+            inputText={inputText} 
+            />)}
 
         </div>
 
