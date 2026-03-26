@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import FlowArrow from "./FlowArrow"
 
 export default function QKVScreen({
   stepIndex,
@@ -19,271 +18,336 @@ export default function QKVScreen({
 
   const [tokens, setTokens] = useState<string[]>([])
   const [selectedToken, setSelectedToken] = useState(0)
+
+  const [embedding, setEmbedding] = useState<number[]>([])
   const [Q, setQ] = useState<number[]>([])
   const [K, setK] = useState<number[]>([])
   const [V, setV] = useState<number[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  // Tokenize the input text
+  const [lookupDim, setLookupDim] = useState<number | null>(null)
+
+  const [visibleCount, setVisibleCount] = useState(0)
+  const [weightVisible, setWeightVisible] = useState(0)
+  const [qkvVisible, setQkvVisible] = useState(0)
+
+  const [loadingQKV, setLoadingQKV] = useState(true)
+
   useEffect(() => {
-    if (inputText.trim().length === 0) {
-      setTokens([])
-      setError(null)
-      return
+    if (!inputText.trim()) return
+
+    const run = async () => {
+      const res = await fetch("http://localhost:8000/v1/tokenize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: inputText, language: "en" })
+      })
+
+      const data = await res.json()
+      const filtered = data.token_embeddings.filter((te:any)=>
+        !te.token.match(/^<\|.*\|>$|^\[.*\]$/)
+      )
+
+      setTokens(filtered.map((t:any)=>t.token))
+      setEmbedding(filtered[0]?.embedding || [])
+      setSelectedToken(0)
     }
 
-    const tokenize = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const response = await fetch("http://localhost:8000/v1/tokenize", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            text: inputText,
-            language: "en",
-          }),
-        })
+    run()
+  },[inputText])
 
-        if (!response.ok) {
-          throw new Error(`Tokenization failed: ${response.statusText}`)
-        }
-
-        const data = await response.json()
-        // Filter out special tokens
-        const filtered = data.token_embeddings.filter((te: any) => !te.token.match(/^<\|.*\|>$|^\[.*\]$/))
-        setTokens(filtered.map((te: any) => te.token))
-        setSelectedToken(0)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error")
-        setTokens([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    tokenize()
-  }, [inputText])
-
-  // Fetch QKV vectors for selected token and layer
   useEffect(() => {
-    if (tokens.length === 0 || !inputText.trim()) {
-      setQ([])
-      setK([])
-      setV([])
-      return
-    }
+    if (!tokens.length) return
 
-    const fetchQKV = async () => {
-      try {
-        const response = await fetch("http://localhost:8000/v1/qkv", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            text: inputText,
-            layer: layer - 1,  // Convert from 1-12 to 0-11
-            head: null,
-            token_positions: [selectedToken],
-            language: "en",
-          }),
+    setLoadingQKV(true)
+
+    const run = async () => {
+      const res = await fetch("http://localhost:8000/v1/qkv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: inputText,
+          layer: layer - 1,
+          head: null,
+          token_positions: [selectedToken],
+          language: "en"
         })
+      })
 
-        if (!response.ok) {
-          throw new Error(`QKV extraction failed: ${response.statusText}`)
-        }
+      const data = await res.json()
+      const vec = data.qkv_vectors?.[0]
 
-        const data = await response.json()
-        if (data.qkv_vectors && data.qkv_vectors.length > 0) {
-          const vectors = data.qkv_vectors[0]
-          // Get first 5 values and round to 2 decimals
-          setQ(vectors.query.slice(0, 4).map((v: number) => parseFloat(v.toFixed(2))))
-          setK(vectors.key.slice(0, 4).map((v: number) => parseFloat(v.toFixed(2))))
-          setV(vectors.value.slice(0, 4).map((v: number) => parseFloat(v.toFixed(2))))
-        }
-      } catch (err) {
-        console.error("QKV fetch error:", err)
-        setQ([])
-        setK([])
-        setV([])
+      if (vec) {
+        setQ(vec.query)
+        setK(vec.key)
+        setV(vec.value)
       }
+
+      setLoadingQKV(false)
     }
 
-    fetchQKV()
-  }, [inputText, selectedToken, layer])
+    run()
+  },[selectedToken, layer, inputText, tokens])
 
-const SmallVector = ({data,color}:{data:number[],color:string}) => (
-<div className="flex gap-2 mt-2">
-{data.map((v,i)=>(
-<div
-key={i}
-className={`w-11 h-8 rounded text-sm flex items-center justify-center ${color}`}
->
-{v}
-</div>
-))}
-</div>
-)
+  useEffect(() => {
+    if (!embedding.length || !Q.length) return
 
-return (
+    setVisibleCount(0)
+    setWeightVisible(0)
+    setQkvVisible(0)
 
-<div className="grid grid-cols-[2fr_1fr] gap-10">
+    let i = 0
 
-<div className="flex flex-col items-center gap-5">
+    const interval = setInterval(() => {
+      i += 32
+      setVisibleCount(i)
 
-<div className="text-zinc-400 text-sm text-center">
-CLICK A TOKEN TO SEE HOW ITS EMBEDDING PRODUCES Q, K, V
-</div>
+      if (i >= 768) {
+        clearInterval(interval)
 
-{loading && (
-  <div className="text-zinc-500 text-sm">
-    Loading...
-  </div>
-)}
+        // weights flow next
+        let w = 0
+        const wInterval = setInterval(() => {
+          w++
+          setWeightVisible(w)
 
-{error && (
-  <div className="text-red-500 text-sm">
-    Error: {error}
-  </div>
-)}
+          if (w >= 4) {
+            clearInterval(wInterval)
 
-{!loading && !error && tokens.length > 0 && (
-  <>
-    <div className="flex flex-wrap justify-center gap-4 max-w-3xl">
+            // qkv flow
+            let qv = 0
+            const qInterval = setInterval(() => {
+              qv += 32
+              setQkvVisible(qv)
 
-      {tokens.map((t, i) => (
-        <button
-          key={i}
-          onClick={() => setSelectedToken(i)}
-          className={`min-w-[110px] px-4 py-2 rounded-lg border ${
-            selectedToken === i
-              ? "bg-purple-600 border-purple-600"
-              : "border-[#2a2a2e]"
-          }`}
-        >
-          {t}
-        </button>
-      ))}
+              if (qv >= 768) clearInterval(qInterval)
+            }, 20)
+          }
+        }, 120)
+      }
+    }, 20)
+
+    return () => clearInterval(interval)
+  }, [embedding, Q])
+
+  const Heatmap = ({data,color}:{data:number[],color:string}) => {
+    const rows = 16
+    const cols = 48
+
+    return (
+      <div className="grid grid-cols-48 gap-[2px]">
+        {data.slice(0, rows*cols).map((v,i)=>{
+          const intensity = Math.min(Math.abs(v),1)
+          const visible = i < qkvVisible
+          const selected = i===lookupDim
+
+          return (
+            <div
+              key={i}
+              onClick={()=>setLookupDim(i)}
+              className="w-[6px] h-[6px] cursor-pointer transition-all duration-300"
+              style={{
+                backgroundColor: visible
+                  ? `${color}${intensity})`
+                  : "#1c1c1f",
+                opacity: visible ? 1 : 0.1,
+                transform: selected ? "scale(1.8)" : "scale(1)",
+                boxShadow: selected ? "0 0 6px white" : "none"
+              }}
+            />
+          )
+        })}
+      </div>
+    )
+  }
+
+  const EmbeddingMap = () => {
+    const rows = 16
+    const cols = 48
+
+    return (
+      <div className="grid grid-cols-48 gap-[2px]">
+        {embedding.slice(0, rows*cols).map((v,i)=>{
+          const intensity = Math.min(Math.abs(v),1)
+          const visible = i < visibleCount
+          const selected = i===lookupDim
+
+          return (
+            <div
+              key={i}
+              onClick={()=>setLookupDim(i)}
+              className="w-[6px] h-[6px] cursor-pointer transition-all duration-300"
+              style={{
+                backgroundColor: visible
+                  ? `rgba(168,85,247,${intensity})`
+                  : "#1c1c1f",
+                opacity: visible ? 1 : 0.1,
+                transform: selected ? "scale(1.8)" : "scale(1)",
+                boxShadow: selected ? "0 0 6px white" : "none"
+              }}
+            />
+          )
+        })}
+      </div>
+    )
+  }
+
+  const WeightBlocks = ({color}:{color:string}) => {
+    const values = [0.2,0.6,0.4,0.8]
+
+    return (
+      <div className="flex gap-2">
+        {values.map((v,i)=>(
+          <div
+            key={i}
+            className="w-6 h-6 rounded-md transition-all duration-300"
+            style={{
+              backgroundColor: `${color}${v})`,
+              opacity: i < weightVisible ? 1 : 0,
+              transform: i < weightVisible
+                ? "translateY(0px)"
+                : "translateY(10px)"
+            }}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  const lookupQ = lookupDim!=null ? Q[lookupDim] : null
+  const lookupK = lookupDim!=null ? K[lookupDim] : null
+  const lookupV = lookupDim!=null ? V[lookupDim] : null
+  const lookupE = lookupDim!=null ? embedding[lookupDim] : null
+
+  return (
+    <div className="grid grid-cols-[2fr_1fr] gap-10">
+
+      {/* LEFT */}
+      <div className="flex flex-col items-center gap-8">
+
+        <div className="text-zinc-400 text-sm">
+          EMBEDDING → Q · K · V TRANSFORMATION
+        </div>
+
+        {/* TOKENS */}
+        <div className="flex gap-3">
+          {tokens.map((t,i)=>(
+            <button
+              key={i}
+              onClick={()=>setSelectedToken(i)}
+              className={`px-3 py-1 rounded transition-all duration-200 ${
+                selectedToken===i
+                  ? "bg-purple-600 scale-105"
+                  : "bg-[#1c1c1f] hover:scale-105"
+              }`}
+            >{t}</button>
+          ))}
+        </div>
+
+        {/* EMBEDDING */}
+        <div className="w-full max-w-3xl">
+          <div className="text-xs text-zinc-400 mb-1">Embedding (X)</div>
+          <EmbeddingMap />
+        </div>
+
+        {/* WEIGHTS */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="text-zinc-500 text-sm">Projection Weights</div>
+
+          <div className="flex gap-8">
+
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-xs text-blue-400">W_Q</span>
+              <WeightBlocks color="rgba(59,130,246," />
+            </div>
+
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-xs text-red-400">W_K</span>
+              <WeightBlocks color="rgba(239,68,68," />
+            </div>
+
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-xs text-green-400">W_V</span>
+              <WeightBlocks color="rgba(34,197,94," />
+            </div>
+
+          </div>
+        </div>
+
+        {/* LOADING */}
+        {loadingQKV && (
+          <div className="text-zinc-500 text-sm animate-pulse">
+            Computing QKV...
+          </div>
+        )}
+
+        {/* QKV */}
+        {!loadingQKV && (
+          <div className="flex flex-col gap-4 w-full max-w-3xl">
+
+            <div>
+              <div className="text-xs text-zinc-400">Query (Q)</div>
+              <Heatmap data={Q} color="rgba(59,130,246," />
+            </div>
+
+            <div>
+              <div className="text-xs text-zinc-400">Key (K)</div>
+              <Heatmap data={K} color="rgba(239,68,68," />
+            </div>
+
+            <div>
+              <div className="text-xs text-zinc-400">Value (V)</div>
+              <Heatmap data={V} color="rgba(34,197,94," />
+            </div>
+
+          </div>
+        )}
+
+        {/* LOOKUP */}
+        <div className="flex gap-3 items-center">
+          <input
+            type="number"
+            placeholder="dim"
+            className="bg-[#1c1c1f] px-3 py-1 rounded w-24"
+            onChange={(e)=>setLookupDim(Number(e.target.value))}
+          />
+
+          {lookupDim!=null && (
+            <div className="text-sm">
+              dim {lookupDim} →
+              <span className="ml-2 text-purple-400">X {lookupE?.toFixed(3)}</span>
+              <span className="ml-2 text-blue-400">Q {lookupQ?.toFixed(3)}</span>
+              <span className="ml-2 text-red-400">K {lookupK?.toFixed(3)}</span>
+              <span className="ml-2 text-green-400">V {lookupV?.toFixed(3)}</span>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {/* RIGHT */}
+      <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col">
+
+        <h2 className="text-xl font-semibold mb-4">How QKV is Computed</h2>
+
+        <p className="text-sm text-zinc-400">
+          Each dimension is a weighted combination of embedding dimensions.
+        </p>
+
+        <div className="mt-4 bg-[#1c1c1f] p-3 rounded font-mono text-sm">
+          Q_j = Σ X_i · W_Q[i,j] <br/>
+          K_j = Σ X_i · W_K[i,j] <br/>
+          V_j = Σ X_i · W_V[i,j]
+        </div>
+
+        <div className="mt-auto pt-6 flex justify-end">
+          <button
+            onClick={()=>setStepIndex(stepIndex+1)}
+            className="px-4 py-2 border rounded hover:bg-[#1c1c1f]"
+          >Next →</button>
+        </div>
+
+      </div>
 
     </div>
-  </>
-)}
-
-<FlowArrow />
-
-<div className="px-5 py-2 bg-purple-600/20 border border-purple-600 rounded text-purple-300 text-sm font-mono">
-Embedding X (768)
-</div>
-
-<FlowArrow />
-
-<div className="grid grid-cols-3 gap-6 items-start mt-2">
-
-<div className="flex flex-col items-center gap-2">
-
-<div className="text-sm text-zinc-400 font-mono">
-W_Q
-</div>
-
-<div className="px-4 py-2 bg-[#1c1c1f] rounded text-sm font-mono">
-768 × d
-</div>
-
-<div className="text-red-400 text-sm font-semibold mt-1">
-Q
-</div>
-
-<SmallVector data={Q} color="bg-red-500/30 text-red-300"/>
-
-</div>
-
-<div className="flex flex-col items-center gap-2">
-
-<div className="text-sm text-zinc-400 font-mono">
-W_K
-</div>
-
-<div className="px-4 py-2 bg-[#1c1c1f] rounded text-sm font-mono">
-768 × d
-</div>
-
-<div className="text-blue-400 text-sm font-semibold mt-1">
-K
-</div>
-
-<SmallVector data={K} color="bg-blue-500/30 text-blue-300"/>
-
-</div>
-
-<div className="flex flex-col items-center gap-2">
-
-<div className="text-sm text-zinc-400 font-mono">
-W_V
-</div>
-
-<div className="px-4 py-2 bg-[#1c1c1f] rounded text-sm font-mono">
-768 × d
-</div>
-
-<div className="text-green-400 text-sm font-semibold mt-1">
-V
-</div>
-
-<SmallVector data={V} color="bg-green-500/30 text-green-300"/>
-
-</div>
-
-</div>
-
-</div>
-
-
-<div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col h-full">
-
-<div className="flex flex-col gap-4">
-
-<h2 className="text-xl font-semibold">
-Embedding → QKV Projection
-</h2>
-
-<p className="text-zinc-400 text-sm leading-relaxed">
-The attention layer converts each embedding vector into three different
-representations.
-</p>
-
-<div className="bg-[#1c1c1f] p-3 rounded text-sm font-mono">
-Q = XW_Q  
-<br/>
-K = XW_K  
-<br/>
-V = XW_V
-</div>
-
-<div className="border-l-2 border-purple-500 pl-4 text-zinc-400 text-sm">
-The same embedding vector is projected into three different spaces using
-separate learned weight matrices.
-</div>
-
-</div>
-
-<div className="flex justify-end mt-auto pt-6">
-
-<button
-onClick={()=>setStepIndex(stepIndex+1)}
-className="border border-[#2a2a2e] px-5 py-2 rounded-lg hover:bg-[#1c1c1f]"
->
-Next →
-</button>
-
-</div>
-
-</div>
-
-</div>
-
-)
+  )
 }

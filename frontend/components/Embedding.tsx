@@ -1,4 +1,5 @@
 "use client"
+
 import FlowArrow from "./FlowArrow"
 import { useState, useEffect } from "react"
 
@@ -18,8 +19,12 @@ export default function Embedding({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [visibleDims, setVisibleDims] = useState(0)
+  const [viewMode, setViewMode] = useState<"heatmap" | "topk">("heatmap")
   const [finished, setFinished] = useState(false)
+
+  const [visibleCount, setVisibleCount] = useState(0)
+
+  const [lookupDim, setLookupDim] = useState<number | null>(null)
 
   // Fetch embeddings
   useEffect(() => {
@@ -30,7 +35,7 @@ export default function Embedding({
       return
     }
 
-    const tokenize = async () => {
+    const fetchEmbeddings = async () => {
       setLoading(true)
       setError(null)
 
@@ -38,10 +43,7 @@ export default function Embedding({
         const response = await fetch("http://localhost:8000/v1/tokenize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: inputText,
-            language: "en",
-          }),
+          body: JSON.stringify({ text: inputText, language: "en" })
         })
 
         const data = await response.json()
@@ -53,9 +55,8 @@ export default function Embedding({
         )
 
         setTokens(filtered.map((te: any) => te.token))
-        setEmbeddings(filtered.map((te: any) => te.embedding.slice(0, 10)))
+        setEmbeddings(filtered.map((te: any) => te.embedding))
         setSelectedToken(0)
-
       } catch {
         setError("Failed to fetch embeddings")
         setTokens([])
@@ -65,37 +66,78 @@ export default function Embedding({
       }
     }
 
-    tokenize()
+    fetchEmbeddings()
   }, [inputText])
 
-  useEffect(() => {
-    if (!embeddings[selectedToken]) return
+  const currentEmbedding = embeddings[selectedToken] || []
 
-    setVisibleDims(0)
+  useEffect(() => {
+    if (!currentEmbedding.length) return
+
+    setVisibleCount(0)
     setFinished(false)
 
     let i = 0
 
     const interval = setInterval(() => {
-      if (i >= embeddings[selectedToken].length) {
+      i += 32
+      setVisibleCount(i)
+
+      if (i >= 768) {
         clearInterval(interval)
-
-        setTimeout(() => {
-          setFinished(true)
-        }, 300)
-
-        return
+        setFinished(true)
       }
-
-      setVisibleDims(prev => prev + 1)
-      i++
-    }, 60)
+    }, 25)
 
     return () => clearInterval(interval)
-  }, [selectedToken, embeddings])
+  }, [selectedToken, currentEmbedding])
+
+  function renderHeatmap(vec: number[]) {
+    const rows = 24
+    const cols = 32
+
+    return (
+      <div className="grid grid-cols-32 gap-[2px]">
+        {vec.slice(0, rows * cols).map((v, i) => {
+          const intensity = Math.min(Math.abs(v), 1)
+          const isVisible = i < visibleCount
+          const isSelected = i === lookupDim
+
+          const color = v >= 0
+            ? `rgba(168,85,247,${intensity})`
+            : `rgba(251,146,60,${intensity})`
+
+          return (
+            <div
+              key={i}
+              onClick={() => setLookupDim(i)}
+              className={`w-2 h-2 rounded-sm transition-all duration-300 cursor-pointer ${finished ? "animate-pulse" : ""}`}
+              style={{
+                backgroundColor: isVisible ? color : "#1c1c1f",
+                transform: isVisible ? "scale(1)" : "scale(0.6)",
+                opacity: isVisible ? 1 : 0.2,
+                outline: isSelected ? "2px solid white" : "none"
+              }}
+            />
+          )
+        })}
+      </div>
+    )
+  }
+
+  function getTopK(vec: number[], k = 10) {
+    return vec
+      .map((v, i) => ({ v, i }))
+      .sort((a, b) => Math.abs(b.v) - Math.abs(a.v))
+      .slice(0, k)
+  }
+
+  const lookupValue =
+    lookupDim !== null && currentEmbedding[lookupDim] !== undefined
+      ? currentEmbedding[lookupDim]
+      : null
 
   return (
-
     <div className="grid grid-cols-[2fr_1fr] gap-10">
 
       {/* LEFT */}
@@ -110,7 +152,6 @@ export default function Embedding({
 
         {!loading && !error && (
           <div className="flex flex-wrap justify-center gap-4 max-w-3xl">
-
             {tokens.map((t, i) => (
               <button
                 key={i}
@@ -126,114 +167,109 @@ export default function Embedding({
                 {t}
               </button>
             ))}
-
           </div>
         )}
 
-        <FlowArrow />
 
         {tokens.length > 0 && !loading && (
           <div className="text-sm text-zinc-400 text-center">
-            VECTOR FOR "{tokens[selectedToken].toUpperCase()}" — 768 DIMS, SHOWING 10
+            VECTOR FOR "{tokens[selectedToken]?.toUpperCase()}" — 768 DIMS
           </div>
         )}
 
-        <div className="flex flex-col gap-3 w-full max-w-3xl">
+        <div className="flex gap-2 items-center">
+          <input
+            type="number"
+            min={0}
+            max={767}
+            placeholder="dim (0-767)"
+            className="bg-[#1c1c1f] px-3 py-1 rounded text-sm w-32"
+            onChange={(e) => setLookupDim(Number(e.target.value))}
+          />
+          {lookupValue !== null && (
+            <div className="text-sm text-zinc-300">
+              value: <span className={lookupValue >= 0 ? "text-purple-400" : "text-orange-400"}>
+                {lookupValue.toFixed(4)}
+              </span>
+            </div>
+          )}
+        </div>
 
-          {embeddings.length > 0 &&
-            embeddings[selectedToken] &&
-            embeddings[selectedToken].map((v, i) => {
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode("heatmap")}
+            className={`px-3 py-1 rounded ${viewMode === "heatmap" ? "bg-purple-600" : "bg-[#1c1c1f]"}`}
+          >
+            Heatmap
+          </button>
+          <button
+            onClick={() => setViewMode("topk")}
+            className={`px-3 py-1 rounded ${viewMode === "topk" ? "bg-purple-600" : "bg-[#1c1c1f]"}`}
+          >
+            Top Dimensions
+          </button>
+        </div>
 
-              const width = Math.abs(v) * 100
-              const color = v >= 0 ? "bg-purple-500" : "bg-orange-400"
+        {/* VISUALIZATION */}
+        <div className="w-full max-w-3xl bg-[#151517] p-4 rounded-xl border border-[#2a2a2e]">
 
-              return (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 transition-opacity duration-300"
-                  style={{
-                    opacity: i < visibleDims ? 1 : 0.2
-                  }}
-                >
+          {viewMode === "heatmap" && renderHeatmap(currentEmbedding)}
 
-                  <div className="w-16 text-zinc-400">
-                    dim {i}
-                  </div>
-
-                  <div className="flex-1 h-4 bg-[#1c1c1f] rounded overflow-hidden">
-
-                    <div
-                      className={`h-4 rounded ${color} transition-all duration-300`}
-                      style={{
-                        width: i < visibleDims ? `${width}%` : "0%"
-                      }}
-                    />
-
-                  </div>
-
-                  <div className="w-12 text-right text-zinc-400">
-                    {i < visibleDims ? v.toFixed(2) : ""}
-                  </div>
-
+          {viewMode === "topk" && (
+            <div className="flex flex-col gap-3">
+              {getTopK(currentEmbedding).map(({ v, i }) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-zinc-400">dim {i}</span>
+                  <span className={v >= 0 ? "text-purple-400" : "text-orange-400"}>
+                    {v.toFixed(3)}
+                  </span>
                 </div>
-              )
-            })}
+              ))}
+            </div>
+          )}
 
         </div>
 
       </div>
-
 
       {/* RIGHT */}
       <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col">
 
         <div className="flex flex-col gap-4">
 
-          <h2 className="text-xl font-semibold">
-            Embeddings
-          </h2>
+          <h2 className="text-xl font-semibold">Embeddings</h2>
 
           <p className="text-zinc-400 text-sm leading-relaxed">
-            A learned matrix converts each ID into a dense vector. Similar words end up
-            with similar vectors.
+            Each token is mapped to a 768-dimensional vector. Similar tokens have similar patterns.
           </p>
 
           <div className="bg-[#1c1c1f] p-3 rounded text-sm font-mono">
-            E = Lookup(id) <br/>
+            E = Lookup(id) <br />
             X ∈ ℝ^(n×768)
           </div>
 
           <div className="flex items-center gap-4 text-zinc-400 text-sm">
-
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded bg-purple-500" />
-              <span>Positive dimensions</span>
+              <span>Positive</span>
             </div>
 
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded bg-orange-400" />
-              <span>Negative dimensions</span>
+              <span>Negative</span>
             </div>
-
           </div>
 
         </div>
 
         <div className="flex justify-end mt-auto pt-6">
-
           <button
             onClick={() => setStepIndex(stepIndex + 1)}
             className={`border border-[#2a2a2e] px-5 py-2 rounded-lg transition
-              ${
-                finished
-                  ? "bg-purple-600 text-white animate-pulse"
-                  : "hover:bg-[#1c1c1f]"
-              }
-            `}
+              ${finished ? "bg-purple-600 text-white animate-pulse" : "hover:bg-[#1c1c1f]"}`}
           >
             Next →
           </button>
-
         </div>
 
       </div>
