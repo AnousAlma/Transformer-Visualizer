@@ -32,6 +32,9 @@ export default function QKVScreen({
 
   const [loadingQKV, setLoadingQKV] = useState(true)
 
+
+  const [finished, setFinished] = useState(false)
+
   useEffect(() => {
     if (!inputText.trim()) return
 
@@ -94,6 +97,7 @@ export default function QKVScreen({
     setVisibleCount(0)
     setWeightVisible(0)
     setQkvVisible(0)
+    setFinished(false)
 
     let i = 0
 
@@ -119,7 +123,8 @@ export default function QKVScreen({
               qv += 32
               setQkvVisible(qv)
 
-              if (qv >= 768) clearInterval(qInterval)
+              if (qv >= 768) clearInterval(qInterval) 
+              setFinished(true)
             }, 20)
           }
         }, 120)
@@ -342,8 +347,14 @@ export default function QKVScreen({
         <div className="mt-auto pt-6 flex justify-end">
           <button
             onClick={()=>setStepIndex(stepIndex+1)}
-            className="px-4 py-2 border rounded hover:bg-[#1c1c1f]"
-          >Next →</button>
+            className={`px-5 py-2 border border-[#2a2a2e] rounded-lg transition
+              ${finished
+                ? "bg-purple-600 text-white animate-pulse"
+                : "hover:bg-[#1c1c1f]"
+              }`}
+          >
+            Next →
+          </button>
         </div>
 
       </div>
