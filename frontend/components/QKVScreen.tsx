@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 
 export default function QKVScreen({
   stepIndex,
@@ -33,7 +33,9 @@ export default function QKVScreen({
   const [loadingQKV, setLoadingQKV] = useState(true)
   const [finished, setFinished] = useState(false)
 
-  // ---------------- FETCH EMBEDDINGS ----------------
+  // track whether the latest QKV fetch was triggered by a layer switch
+  const isLayerSwitch = useRef(false)
+
   useEffect(() => {
     if (!inputText.trim()) return
 
@@ -57,10 +59,10 @@ export default function QKVScreen({
     run()
   },[inputText])
 
-  // ---------------- FETCH QKV ----------------
   useEffect(() => {
     if (!tokens.length) return
 
+    isLayerSwitch.current = false
     setLoadingQKV(true)
 
     const run = async () => {
@@ -80,21 +82,77 @@ export default function QKVScreen({
       const vec = data.qkv_vectors?.[0]
 
       if (vec) {
-        setQ(vec.query.slice(0, 64))
-        setK(vec.key.slice(0, 64))
-        setV(vec.value.slice(0, 64))
+        setQ(vec.query.slice(0,64))
+        setK(vec.key.slice(0,64))
+        setV(vec.value.slice(0,64))
       }
 
       setLoadingQKV(false)
     }
 
     run()
-  },[selectedToken, layer, inputText, tokens])
+  },[selectedToken, inputText, tokens])
 
-  // ---------------- FLOW ANIMATION ----------------
+  useEffect(() => {
+    if (!tokens.length) return
+
+    isLayerSwitch.current = true
+    setLoadingQKV(true)
+
+    const run = async () => {
+      const res = await fetch("http://localhost:8000/v1/qkv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: inputText,
+          layer: layer - 1,
+          head: null,
+          token_positions: [selectedToken],
+          language: "en"
+        })
+      })
+
+      const data = await res.json()
+      const vec = data.qkv_vectors?.[0]
+
+      if (vec) {
+        setQ(vec.query.slice(0,64))
+        setK(vec.key.slice(0,64))
+        setV(vec.value.slice(0,64))
+      }
+
+      setLoadingQKV(false)
+    }
+
+    run()
+  },[layer])
+
   useEffect(() => {
     if (!embedding.length || !Q.length) return
 
+    // Layer switch: skip embedding + weights animation, only replay QKV heatmap
+    if (isLayerSwitch.current) {
+      setQkvVisible(0)
+      setFinished(false)
+
+      // ensure embedding and weights stay fully visible
+      setVisibleCount(768)
+      setWeightVisible(4)
+
+      let qv = 0
+      const qInterval = setInterval(() => {
+        qv += 4
+        setQkvVisible(qv)
+        if (qv >= 64) {
+          clearInterval(qInterval)
+          setFinished(true)
+        }
+      }, 20)
+
+      return () => clearInterval(qInterval)
+    }
+
+    // Full animation: token switch or initial load
     setVisibleCount(0)
     setWeightVisible(0)
     setQkvVisible(0)
@@ -109,67 +167,92 @@ export default function QKVScreen({
       if (i >= 768) {
         clearInterval(interval)
 
-        let w = 0
-        const wInterval = setInterval(() => {
-          w++
-          setWeightVisible(w)
+        setTimeout(()=>{
+          let w = 0
+          const wInterval = setInterval(()=>{
+            w++
+            setWeightVisible(w)
 
-          if (w >= 4) {
-            clearInterval(wInterval)
+            if (w >= 4) {
+              clearInterval(wInterval)
 
-            let qv = 0
-            const qInterval = setInterval(() => {
-              qv += 4
-              setQkvVisible(qv)
+              setTimeout(()=>{
+                let qv = 0
+                const qInterval = setInterval(()=>{
+                  qv += 4
+                  setQkvVisible(qv)
 
-              if (qv >= 64) {
-                clearInterval(qInterval)
-                setFinished(true)
-              }
-            }, 20)
-          }
-        }, 120)
+                  if (qv >= 64) {
+                    clearInterval(qInterval)
+                    setFinished(true)
+                  }
+                },20)
+              },300)
+            }
+          },120)
+        },200)
       }
-    }, 20)
+    },20)
 
     return () => clearInterval(interval)
   }, [embedding, Q])
 
-  // ---------------- EMBEDDING ----------------
-  const EmbeddingMap = () => {
-    return (
-      <div className="grid grid-cols-48 gap-[2px]">
-        {embedding.slice(0, 768).map((v,i)=>{
-          const intensity = Math.min(Math.abs(v),1)
-          const visible = i < visibleCount
-          const selected = i===lookupDim
+  const EmbeddingMap = () => (
+    <div className="grid grid-cols-48 gap-[2px]">
+      {embedding.slice(0,768).map((v,i)=>{
+        const visible = i < visibleCount
+        const selected = i===lookupDim
 
-          return (
+        return (
+          <div
+            key={i}
+            onClick={()=>setLookupDim(i)}
+            className="w-[6px] h-[6px] transition-all cursor-pointer"
+            style={{
+              backgroundColor: visible
+                ? `rgba(168,85,247,${Math.abs(v)})`
+                : "#1c1c1f",
+              opacity: visible ? 1 : 0.1,
+              transform: selected ? "scale(1.6)" : "scale(1)",
+              boxShadow: selected ? "0 0 6px white" : "none"
+            }}
+          />
+        )
+      })}
+    </div>
+  )
+
+  const WeightBlocks = ({color,label}:{color:string,label:string})=>{
+    const vals=[0.2,0.6,0.4,0.8]
+
+    return(
+      <div className="flex flex-col items-center gap-1">
+        <div className="text-xs text-zinc-400">{label}</div>
+        <div className="flex gap-2">
+          {vals.map((v,i)=>(
             <div
               key={i}
-              onClick={()=>setLookupDim(i)}
-              className="w-[6px] h-[6px] cursor-pointer transition-all duration-300"
+              className="w-6 h-6 rounded-md transition-all duration-300"
               style={{
-                backgroundColor: visible
-                  ? `rgba(168,85,247,${intensity})`
-                  : "#1c1c1f",
-                opacity: visible ? 1 : 0.1,
-                transform: selected ? "scale(1.8)" : "scale(1)",
-                boxShadow: selected ? "0 0 6px white" : "none"
+                backgroundColor:`${color}${v})`,
+                opacity: i<weightVisible ? 1 : 0,
+                transform: i<weightVisible
+                  ? "translateY(0px)"
+                  : "translateY(10px)"
               }}
             />
-          )
-        })}
+          ))}
+        </div>
       </div>
     )
   }
 
-  // ---------------- QKV HEATMAP (8x8 BLOCK) ----------------
-  const Heatmap = ({data,color}:{data:number[],color:string}) => {
-    return (
-      <div className="grid grid-cols-8 gap-[4px] justify-center">
+  const Heatmap = ({data,color,label}:{data:number[],color:string,label:string})=>(
+    <div className="flex flex-col items-center gap-2">
+      <div className="text-xs text-zinc-400">{label}</div>
+
+      <div className="grid grid-cols-8 gap-[4px]">
         {data.map((v,i)=>{
-          const intensity = Math.min(Math.abs(v),1)
           const visible = i < qkvVisible
           const selected = i===lookupDim
 
@@ -177,10 +260,10 @@ export default function QKVScreen({
             <div
               key={i}
               onClick={()=>setLookupDim(i)}
-              className="w-[12px] h-[12px] rounded-sm cursor-pointer transition-all duration-300"
+              className="w-[12px] h-[12px] rounded-sm cursor-pointer transition-all"
               style={{
                 backgroundColor: visible
-                  ? `${color}${intensity})`
+                  ? `${color}${Math.abs(v)})`
                   : "#1c1c1f",
                 opacity: visible ? 1 : 0.15,
                 transform: selected ? "scale(1.6)" : "scale(1)",
@@ -190,33 +273,9 @@ export default function QKVScreen({
           )
         })}
       </div>
-    )
-  }
+    </div>
+  )
 
-  // ---------------- WEIGHTS ----------------
-  const WeightBlocks = ({color}:{color:string}) => {
-    const values = [0.2,0.6,0.4,0.8]
-
-    return (
-      <div className="flex gap-2">
-        {values.map((v,i)=>(
-          <div
-            key={i}
-            className="w-6 h-6 rounded-md transition-all duration-300"
-            style={{
-              backgroundColor: `${color}${v})`,
-              opacity: i < weightVisible ? 1 : 0,
-              transform: i < weightVisible
-                ? "translateY(0px)"
-                : "translateY(10px)"
-            }}
-          />
-        ))}
-      </div>
-    )
-  }
-
-  // ---------------- LOOKUP ----------------
   const lookupQ = lookupDim!=null ? Q[lookupDim] : null
   const lookupK = lookupDim!=null ? K[lookupDim] : null
   const lookupV = lookupDim!=null ? V[lookupDim] : null
@@ -238,7 +297,7 @@ export default function QKVScreen({
             <button
               key={i}
               onClick={()=>setSelectedToken(i)}
-              className={`px-3 py-1 rounded transition-all duration-200 ${
+              className={`px-3 py-1 rounded ${
                 selectedToken===i
                   ? "bg-purple-600 scale-105"
                   : "bg-[#1c1c1f] hover:scale-105"
@@ -248,65 +307,35 @@ export default function QKVScreen({
         </div>
 
         {/* EMBEDDING */}
-        <div className="w-full max-w-3xl">
-          <div className="text-xs text-zinc-400 mb-1">Embedding (X)</div>
-          <EmbeddingMap />
+        <EmbeddingMap />
+
+        {/* × */}
+        <div className={`text-3xl ${
+          weightVisible > 0 ? "opacity-100 text-purple-400" : "opacity-0"
+        }`}>
+          ×
         </div>
 
         {/* WEIGHTS */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="text-zinc-500 text-sm">Projection Weights</div>
-
-          <div className="flex gap-8">
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-xs text-blue-400">W_Q</span>
-              <WeightBlocks color="rgba(59,130,246," />
-            </div>
-
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-xs text-red-400">W_K</span>
-              <WeightBlocks color="rgba(239,68,68," />
-            </div>
-
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-xs text-green-400">W_V</span>
-              <WeightBlocks color="rgba(34,197,94," />
-            </div>
-          </div>
+        <div className="flex gap-8">
+          <WeightBlocks color="rgba(59,130,246," label="W_Q"/>
+          <WeightBlocks color="rgba(239,68,68," label="W_K"/>
+          <WeightBlocks color="rgba(34,197,94," label="W_V"/>
         </div>
 
-        {/* LOADING */}
-        {loadingQKV && (
-          <div className="text-zinc-500 text-sm animate-pulse">
-            Computing QKV...
-          </div>
-        )}
+        {/* = */}
+        <div className={`text-3xl ${
+          weightVisible >= 4 ? "opacity-100 text-purple-400" : "opacity-0"
+        }`}>
+          =
+        </div>
 
         {/* QKV */}
         {!loadingQKV && (
-          <div className="flex gap-12 items-start justify-center">
-
-            <div>
-              <div className="text-xs text-zinc-400 mb-2 text-center">
-                Query (Q) — 64 dims
-              </div>
-              <Heatmap data={Q} color="rgba(59,130,246," />
-            </div>
-
-            <div>
-              <div className="text-xs text-zinc-400 mb-2 text-center">
-                Key (K) — 64 dims
-              </div>
-              <Heatmap data={K} color="rgba(239,68,68," />
-            </div>
-
-            <div>
-              <div className="text-xs text-zinc-400 mb-2 text-center">
-                Value (V) — 64 dims
-              </div>
-              <Heatmap data={V} color="rgba(34,197,94," />
-            </div>
-
+          <div className="flex gap-12">
+            <Heatmap data={Q} color="rgba(59,130,246," label="Query (Q) — 64 dims"/>
+            <Heatmap data={K} color="rgba(239,68,68," label="Key (K) — 64 dims"/>
+            <Heatmap data={V} color="rgba(34,197,94," label="Value (V) — 64 dims"/>
           </div>
         )}
 
@@ -337,11 +366,7 @@ export default function QKVScreen({
 
         <h2 className="text-xl font-semibold mb-4">How QKV is Computed</h2>
 
-        <p className="text-sm text-zinc-400">
-          Each dimension is a weighted combination of embedding dimensions.
-        </p>
-
-        <div className="mt-4 bg-[#1c1c1f] p-3 rounded font-mono text-sm">
+        <div className="bg-[#1c1c1f] p-3 rounded font-mono text-sm">
           Q_j = Σ X_i · W_Q[i,j] <br/>
           K_j = Σ X_i · W_K[i,j] <br/>
           V_j = Σ X_i · W_V[i,j]
@@ -350,11 +375,11 @@ export default function QKVScreen({
         <div className="mt-auto pt-6 flex justify-end">
           <button
             onClick={()=>setStepIndex(stepIndex+1)}
-            className={`px-5 py-2 border border-[#2a2a2e] rounded-lg transition
-              ${finished
+            className={`px-5 py-2 border rounded ${
+              finished
                 ? "bg-purple-600 text-white animate-pulse"
                 : "hover:bg-[#1c1c1f]"
-              }`}
+            }`}
           >
             Next →
           </button>

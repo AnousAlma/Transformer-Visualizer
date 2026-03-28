@@ -147,14 +147,13 @@ export default function SelfAttentionScreen({
         )}
 
         <FlowArrow />
-
         {/* Formula */}
         <div className="flex items-center justify-center gap-4 text-sm flex-wrap">
-          <div className="px-3 py-2 bg-red-500/20 text-red-300 rounded font-mono">
+          <div className="px-3 py-2 bg-blue-500/20 text-blue-300 rounded font-mono">
             Q_{activeToken}
           </div>
           <div className="text-zinc-500 text-lg">·</div>
-          <div className="px-3 py-2 bg-blue-500/20 text-blue-300 rounded font-mono">
+          <div className="px-3 py-2 bg-red-500/20 text-red-300 rounded font-mono">
             K_tokensᵀ
           </div>
           <div className="text-zinc-500 text-lg">→</div>
