@@ -151,6 +151,7 @@ request body:
   "text": "The quick brown fox",
   "layer": 0,
   "head": 0,
+  "include_bias": true,
   "language": "en"
 }
 ```
@@ -173,7 +174,8 @@ response:
       ],
       "value_vectors": [[...], ...],
       "out_vectors": [[...], ...],
-      "out_vector_kind": "reconstructed_from_z"
+      "out_vector_kind": "reconstructed_from_z",
+      "includes_bias": true
     }
   ]
 }
@@ -186,6 +188,7 @@ response:
 - `text` (required): input text to analyze
 - `head` (required): specific attention head index to extract
 - `layer` (optional): specific layer index to extract (None = all layers)
+- `include_bias` (optional, default: `true`): when `true`, distributes `b_O / n_heads` into each head's `out_vectors` so they sum to the full layer attention output; set to `false` to get pure per-head contributions without any bias term
 - `language` (optional, default: "en"): language model to use ("en" or "fr")
 
 ### ablation experiment

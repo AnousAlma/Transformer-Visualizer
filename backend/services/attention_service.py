@@ -163,6 +163,7 @@ class AttentionExtractor:
         text: str,
         head: int,
         layer: Optional[int] = None,
+        include_bias: bool = True,
     ) -> Dict:
         """Extract head-out data for a specific head across all (or one) layer(s).
 
@@ -233,8 +234,10 @@ class AttentionExtractor:
 
             z_head = z[:, head, :]
             out = z_head @ W_O[head]
-            if b_O is not None:
+            bias_applied = False
+            if b_O is not None and include_bias:
                 out = out + (b_O / n_heads)
+                bias_applied = True
             out_vectors = out.detach().cpu().numpy().tolist()
 
             patterns_out.append(
@@ -245,6 +248,7 @@ class AttentionExtractor:
                     "value_vectors": value_vectors,
                     "out_vectors": out_vectors,
                     "out_vector_kind": "reconstructed_from_z",
+                    "includes_bias": bias_applied,
                 }
             )
 
@@ -337,7 +341,10 @@ def extract_attention_head_out_all(
     text: str,
     head: int,
     layer: Optional[int] = None,
+    include_bias: bool = True,
 ) -> Dict:
     """Public interface for extracting head-out data for a specific head across layers."""
     extractor = AttentionExtractor(model)
-    return extractor.extract_all_heads_value_and_out(text=text, head=head, layer=layer)
+    return extractor.extract_all_heads_value_and_out(
+        text=text, head=head, layer=layer, include_bias=include_bias
+    )

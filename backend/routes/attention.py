@@ -94,6 +94,7 @@ async def get_attention_head_out(request: AttentionHeadOutRequest):
             text=request.text,
             head=request.head,
             layer=request.layer,
+            include_bias=request.include_bias,
         )
 
         patterns = [
@@ -104,6 +105,7 @@ async def get_attention_head_out(request: AttentionHeadOutRequest):
                 value_vectors=p["value_vectors"],
                 out_vectors=p["out_vectors"],
                 out_vector_kind=p["out_vector_kind"],
+                includes_bias=p["includes_bias"],
             )
             for p in data["patterns"]
         ]

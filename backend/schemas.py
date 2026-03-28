@@ -63,6 +63,7 @@ class AttentionHeadOutRequest(BaseModel):
     text: str
     layer: Optional[int] = None
     head: int
+    include_bias: bool = True  # if True, b_O/n_heads is added to each head's out_vectors
     language: str = "en"
 
 
@@ -75,6 +76,7 @@ class AttentionHeadOutPattern(BaseModel):
     value_vectors: List[List[float]]  # [seq, d_head]
     out_vectors: List[List[float]]    # [seq, d_model]
     out_vector_kind: str              # "result" or "reconstructed_from_z"
+    includes_bias: bool               # whether b_O/n_heads was added to out_vectors
 
 
 class AttentionHeadOutResponse(BaseModel):
