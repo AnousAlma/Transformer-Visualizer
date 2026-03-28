@@ -64,6 +64,7 @@ class AttentionHeadOutRequest(BaseModel):
     layer: Optional[int] = None
     head: int
     include_bias: bool = True  # if True, b_O/n_heads is added to each head's out_vectors
+    include_attention_matrix: bool = False  # if True, attention_matrix is included in each pattern
     language: str = "en"
 
 
@@ -72,7 +73,7 @@ class AttentionHeadOutPattern(BaseModel):
 
     layer: int
     head: int
-    attention_matrix: List[List[float]]
+    attention_matrix: Optional[List[List[float]]] = None  # [q, k]; only present when include_attention_matrix=True
     value_vectors: List[List[float]]  # [seq, d_head]
     out_vectors: List[List[float]]    # [seq, d_model]
     out_vector_kind: Literal["result", "reconstructed_from_z"]  # "result" or "reconstructed_from_z"

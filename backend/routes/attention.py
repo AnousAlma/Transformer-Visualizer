@@ -95,6 +95,7 @@ async def get_attention_head_out(request: AttentionHeadOutRequest):
             head=request.head,
             layer=request.layer,
             include_bias=request.include_bias,
+            include_attention_matrix=request.include_attention_matrix,
         )
 
         patterns = [

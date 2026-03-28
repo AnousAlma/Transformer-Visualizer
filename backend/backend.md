@@ -152,6 +152,7 @@ request body:
   "layer": 0,
   "head": 0,
   "include_bias": true,
+  "include_attention_matrix": false,
   "language": "en"
 }
 ```
@@ -166,12 +167,7 @@ response:
     {
       "layer": 0,
       "head": 0,
-      "attention_matrix": [
-        [0.8, 0.1, 0.05, 0.05],
-        [0.2, 0.6, 0.15, 0.05],
-        [0.1, 0.2, 0.6, 0.1],
-        [0.05, 0.1, 0.2, 0.65]
-      ],
+      "attention_matrix": null,
       "value_vectors": [[...], ...],
       "out_vectors": [[...], ...],
       "out_vector_kind": "reconstructed_from_z",
@@ -181,7 +177,7 @@ response:
 }
 ```
 
-**Note:** `value_vectors` has shape `[seq_len, d_head]` and `out_vectors` has shape `[seq_len, d_model]`. Vectors are abbreviated above for clarity.
+**Note:** `value_vectors` has shape `[seq_len, d_head]` and `out_vectors` has shape `[seq_len, d_model]`. Vectors are abbreviated above for clarity. `attention_matrix` is `null` by default; set `include_attention_matrix: true` to receive it with shape `[seq_len, seq_len]`.
 
 **Parameters:**
 
@@ -189,6 +185,7 @@ response:
 - `head` (required): specific attention head index to extract
 - `layer` (optional): specific layer index to extract (None = all layers)
 - `include_bias` (optional, default: `true`): when `true`, distributes `b_O / n_heads` into each head's `out_vectors` so they sum to the full layer attention output; set to `false` to get pure per-head contributions without any bias term
+- `include_attention_matrix` (optional, default: `false`): when `true`, includes the `[seq_len, seq_len]` attention matrix in each pattern; omitted by default to reduce response size
 - `language` (optional, default: "en"): language model to use ("en" or "fr")
 
 ### ablation experiment
