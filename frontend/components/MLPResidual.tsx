@@ -1,16 +1,13 @@
 "use client"
-import { useState, useEffect, useRef } from "react"
-
+import { useState, useEffect } from "react"
 function generateVector(seedStr: string, length = 64) {
   let seed = 0
   for (let i = 0; i < seedStr.length; i++) seed += seedStr.charCodeAt(i)
   return Array.from({ length }, (_, i) => Math.sin(seed * (i + 1)) * 0.6)
 }
-
 function gelu(x: number) {
   return 0.5 * x * (1 + Math.tanh(Math.sqrt(2 / Math.PI) * (x + 0.044715 * x * x * x)))
 }
-
 function HeatStrip({
   data, color, highlightIdx, onHover, label, visible = true,
 }: {
@@ -54,8 +51,6 @@ function HeatStrip({
     </div>
   )
 }
-
-/* ── Activation bar visual — replaces heatmap for linear/gelu ── */
 function ActivationBars({
   seedVec, color, label, visible,
 }: {
@@ -95,7 +90,6 @@ function ActivationBars({
     </div>
   )
 }
-
 function GeluCurve({ highlightX }: { highlightX: number | null }) {
   const W = 200, H = 80, xMin = -3, xMax = 3, yMin = -0.5, yMax = 1.5
   function toSVG(x: number, y: number) {
@@ -125,7 +119,6 @@ function GeluCurve({ highlightX }: { highlightX: number | null }) {
     </div>
   )
 }
-
 function MLPFlow({
   attnVec, mlpVec, geluVec, finalVec, hoverIdx, setHoverIdx, phase,
 }: {
@@ -138,33 +131,29 @@ function MLPFlow({
   phase: number
 }) {
   const hVal = hoverIdx !== null ? attnVec[hoverIdx] : null
-
   return (
     <div className="flex flex-col gap-8 items-start w-full">
-
-      {/* 1 — attention out */}
       <div className="flex items-center gap-5 w-full">
         <div className="w-6 h-6 rounded-full border border-purple-500/40 flex items-center justify-center text-[10px] text-purple-400 shrink-0">1</div>
         <HeatStrip data={attnVec} color={[168, 85, 247]} highlightIdx={hoverIdx}
           onHover={setHoverIdx} label="Attention Output  ·  64 dims" visible={phase >= 1} />
       </div>
-
       <div className="flex items-center gap-3 pl-11 transition-all duration-500" style={{ opacity: phase >= 2 ? 1 : 0 }}>
         <div className="flex flex-col items-center gap-1">
           <div className="h-5 w-px bg-zinc-700" />
-          <div className="text-[10px] text-zinc-600">Linear (W₁)</div>
+          <div className="text-[10px] text-zinc-600">Linear (W₁) · 64 → 768</div>
           <div className="h-5 w-px bg-zinc-700" />
         </div>
+        <div className="text-[10px] text-zinc-600 border border-zinc-800 rounded px-2 py-1 ml-2">
+          expands here ↑
+        </div>
       </div>
-
-      {/* 2 — linear (activation bars) */}
       <div className="flex items-center gap-5 w-full transition-all duration-500"
         style={{ opacity: phase >= 2 ? 1 : 0, transform: phase >= 2 ? "translateY(0)" : "translateY(10px)" }}>
         <div className="w-6 h-6 rounded-full border border-blue-500/40 flex items-center justify-center text-[10px] text-blue-400 shrink-0">2</div>
         <ActivationBars seedVec={mlpVec} color="rgba(59,130,246,0.7)"
-          label="After Linear Layer  ·  64 dims" visible={phase >= 2} />
+          label="After Linear Layer  ·  768 dims" visible={phase >= 2} />
       </div>
-
       <div className="flex items-start gap-6 pl-11 transition-all duration-500" style={{ opacity: phase >= 3 ? 1 : 0 }}>
         <div className="flex flex-col items-center gap-1">
           <div className="h-5 w-px bg-zinc-700" />
@@ -173,15 +162,12 @@ function MLPFlow({
         </div>
         <GeluCurve highlightX={hVal} />
       </div>
-
-      {/* 3 — after GELU (activation bars) */}
       <div className="flex items-center gap-5 w-full transition-all duration-500"
         style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? "translateY(0)" : "translateY(10px)" }}>
         <div className="w-6 h-6 rounded-full border border-emerald-500/40 flex items-center justify-center text-[10px] text-emerald-400 shrink-0">3</div>
         <ActivationBars seedVec={geluVec} color="rgba(52,211,153,0.7)"
-          label="After GELU  ·  64 dims" visible={phase >= 3} />
+          label="After GELU  ·  768 dims" visible={phase >= 3} />
       </div>
-
       <div className="flex items-center gap-3 pl-11 transition-all duration-500" style={{ opacity: phase >= 4 ? 1 : 0 }}>
         <div className="flex flex-col items-center gap-1">
           <div className="h-5 w-px bg-zinc-700" />
@@ -192,19 +178,15 @@ function MLPFlow({
           add attention output back
         </div>
       </div>
-
-      {/* 4 — final (heatmap, same as before) */}
       <div className="flex items-center gap-5 w-full transition-all duration-500"
         style={{ opacity: phase >= 4 ? 1 : 0, transform: phase >= 4 ? "translateY(0)" : "translateY(10px)" }}>
         <div className="w-6 h-6 rounded-full border border-violet-400/60 bg-violet-500/10 flex items-center justify-center text-[10px] text-violet-300 shrink-0">4</div>
         <HeatStrip data={finalVec} color={[192, 132, 252]} highlightIdx={hoverIdx}
           onHover={setHoverIdx} label="Final Vector  ·  64 dims" visible={phase >= 4} />
       </div>
-
     </div>
   )
 }
-
 /* ─── MAIN ──────────────────────────────────────────────────── */
 export default function MLPScreen({
   stepIndex, setStepIndex, inputText, layer = 1,
@@ -219,12 +201,10 @@ export default function MLPScreen({
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   const [phase, setPhase] = useState(0)
   const [realFinalVec, setRealFinalVec] = useState<number[] | null>(null)
-  const prevToken = useRef(-1)
-
-  /* fetch real final vector for dim inspector */
+  const [realAttnVec, setRealAttnVec] = useState<number[] | null>(null)
+  const [lookupDim, setLookupDim] = useState<number | null>(null)
   useEffect(() => {
     if (!tokens.length) return
-    setRealFinalVec(null)
     fetch("http://localhost:8000/v1/mlp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -234,44 +214,47 @@ export default function MLPScreen({
       }),
     })
       .then(r => r.json())
-      .then(d => { if (d.mlp_outputs?.[0]?.mlp_output) setRealFinalVec(d.mlp_outputs[0].mlp_output) })
+      .then(d => {
+        const out = d.mlp_outputs?.[0]
+        if (out?.mlp_output) setRealFinalVec(out.mlp_output)
+        if (out?.attention_residual) setRealAttnVec(out.attention_residual.slice(0, 64))
+        // animate after new data arrives so strips show fresh values
+        setPhase(0)
+        setTimeout(() => setPhase(1), 60)
+        setTimeout(() => setPhase(2), 360)
+        setTimeout(() => setPhase(3), 700)
+        setTimeout(() => setPhase(4), 1040)
+      })
       .catch(console.error)
   }, [inputText, selectedToken, layer])
-
   useEffect(() => {
-    if (prevToken.current === selectedToken) return
-    prevToken.current = selectedToken
-    setPhase(0)
-    const ts = [120, 420, 760, 1100].map((d, i) => setTimeout(() => setPhase(i + 1), d))
-    return () => ts.forEach(clearTimeout)
-  }, [selectedToken])
-
-  useEffect(() => {
+    // initial load animation before first fetch resolves
     const ts = [150, 450, 800, 1150].map((d, i) => setTimeout(() => setPhase(i + 1), d))
     return () => ts.forEach(clearTimeout)
   }, [])
-
-  const attnVec  = generateVector((tokens[selectedToken] ?? "") + "_ATTN")
+  const attnVec  = realAttnVec ?? generateVector((tokens[selectedToken] ?? "") + "_ATTN")
   const mlpVec   = generateVector((tokens[selectedToken] ?? "") + "_MLP")
   const geluVec  = mlpVec.map(gelu)
-  // visual final vec stays seeded; dim inspector uses real
-  const finalVec = attnVec.map((v, i) => v + geluVec[i])
+  const finalVec = realFinalVec
+    ? realFinalVec.slice(0, 64)
+    : attnVec.map((v, i) => v + geluVec[i])
 
-  const hoveredValues = hoverIdx !== null ? {
-    attn:  attnVec[hoverIdx],
-    mlp:   mlpVec[hoverIdx],
-    gelu:  geluVec[hoverIdx],
-    final: realFinalVec ? realFinalVec[hoverIdx] : finalVec[hoverIdx],
+  const activeDim = hoverIdx ?? lookupDim
+  const isHighDim = activeDim !== null && activeDim >= 64
+
+  const inspectorValues = activeDim !== null ? {
+    final: realFinalVec ? realFinalVec[activeDim] : (activeDim < 64 ? finalVec[activeDim] : null),
+    attn:  activeDim < 64 ? attnVec[activeDim]  : null,
+    mlp:   activeDim < 64 ? mlpVec[activeDim]   : null,
+    gelu:  activeDim < 64 ? geluVec[activeDim]  : null,
   } : null
 
   return (
     <div className="flex w-full gap-8 h-full">
-
       <div className="flex-1 flex flex-col min-h-0">
         <div className="text-[11px] tracking-[0.22em] text-zinc-500 uppercase mb-6">
           Refine Representation · MLP + Residual
         </div>
-
         <div className="flex gap-3 mb-8 flex-wrap">
           {tokens.map((t, i) => (
             <button key={i} onClick={() => setSelectedToken(i)}
@@ -282,7 +265,6 @@ export default function MLPScreen({
               }`}>{t}</button>
           ))}
         </div>
-
         <div className="overflow-y-auto pr-2" style={{ maxHeight: "calc(100vh - 260px)" }}>
           <MLPFlow
             attnVec={attnVec} mlpVec={mlpVec} geluVec={geluVec} finalVec={finalVec}
@@ -301,8 +283,8 @@ export default function MLPScreen({
 
         <div className="flex flex-col gap-3 text-xs">
           {[
-            { color: "bg-purple-500",  label: "Attention output enters" },
-            { color: "bg-blue-500",    label: "Linear layer (W₁ · x + b)" },
+            { color: "bg-purple-500",  label: "Attention output enters (64 dims)" },
+            { color: "bg-blue-500",    label: "Linear layer (W₁) expands 64 → 768 dims, applying learned weights + bias" },
             { color: "bg-emerald-400", label: "GELU activation — lets small values pass partially, large values fully" },
             { color: "bg-violet-400",  label: "Residual add — preserves earlier info" },
           ].map(({ color, label }, i) => (
@@ -313,26 +295,59 @@ export default function MLPScreen({
           ))}
         </div>
 
-        <div className="border-t border-[#1e1e24] pt-4">
-          <div className="text-[10px] tracking-widest text-zinc-600 uppercase mb-3">Dim Inspector</div>
-          {hoveredValues ? (
+        <div className="border-t border-[#1e1e24] pt-4 flex flex-col gap-3">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase">Dim Inspector</div>
+          <input
+            type="number"
+            min={0}
+            max={767}
+            placeholder="0 – 767"
+            value={lookupDim ?? ""}
+            onChange={(e) => {
+              const v = e.target.value === "" ? null : Math.min(767, Math.max(0, Number(e.target.value)))
+              setLookupDim(v)
+            }}
+            className="bg-[#111114] border border-[#2a2a2e] text-zinc-300 px-3 py-1.5 rounded-lg w-full text-xs font-mono focus:outline-none focus:border-purple-500/50 transition placeholder-zinc-700"
+          />
+
+          {inspectorValues ? (
             <div className="flex flex-col gap-2 font-mono text-xs">
-              <span className="text-zinc-600">dim {hoverIdx}</span>
-              {[
-                { label: "Attn",   val: hoveredValues.attn,  color: "text-purple-400" },
-                { label: "Linear", val: hoveredValues.mlp,   color: "text-blue-400" },
-                { label: "GELU",   val: hoveredValues.gelu,  color: "text-emerald-400" },
-                { label: "Final",  val: hoveredValues.final, color: "text-violet-300" },
-              ].map(({ label, val, color }) => (
-                <div key={label} className="flex justify-between items-center">
-                  <span className="text-zinc-600">{label}</span>
-                  <span className={`${color} tabular-nums`}>{val.toFixed(4)}</span>
-                </div>
-              ))}
+              <div className="flex justify-between">
+                <span className="text-zinc-600">dim</span>
+                <span className="text-zinc-400">{activeDim}</span>
+              </div>
+
+              {!isHighDim ? (
+                <>
+                  {[
+                    { label: "Attn",  val: inspectorValues.attn,  color: "text-purple-400" },
+                    { label: "MLP",   val: inspectorValues.mlp,   color: "text-blue-400" },
+                    { label: "GELU",  val: inspectorValues.gelu,  color: "text-emerald-400" },
+                    { label: "Final", val: inspectorValues.final, color: "text-violet-300" },
+                  ].map(({ label, val, color }) => (
+                    <div key={label} className="flex justify-between items-center">
+                      <span className="text-zinc-600">{label}</span>
+                      <span className={`${color} tabular-nums`}>{val?.toFixed(4) ?? "—"}</span>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <div className="text-[10px] text-zinc-700 leading-relaxed">
+                    dims 64–767 only exist after the linear expansion — final vector only
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-600">Final</span>
+                    <span className="text-violet-300 tabular-nums">
+                      {inspectorValues.final?.toFixed(4) ?? "—"}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <div className="text-[11px] text-zinc-700">
-              hover any cell to inspect values through each stage
+              hover any cell or type a dim (0–767) to inspect
             </div>
           )}
         </div>
@@ -344,7 +359,6 @@ export default function MLPScreen({
           </button>
         </div>
       </div>
-
     </div>
   )
 }
