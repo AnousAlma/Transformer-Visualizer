@@ -22,7 +22,6 @@ export default function SelfAttentionScreen({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Reset selected token when input changes
   useEffect(() => {
     setQueryToken(0)
   }, [inputText])
@@ -44,7 +43,7 @@ export default function SelfAttentionScreen({
         body: JSON.stringify({
           text: inputText,
           layer: layer - 1,
-          head: head,         // null means all heads averaged
+          head: head,
           language: "en"
         })
       })
@@ -53,7 +52,6 @@ export default function SelfAttentionScreen({
 
       const data = await res.json()
 
-      // Filter out special tokens e.g. <|endoftext|>, [PAD], [CLS] etc.
       const allTokens: string[] = data.tokens
       const keepIndices = allTokens
         .map((t, i) => ({ t, i }))
@@ -62,7 +60,6 @@ export default function SelfAttentionScreen({
 
       const filteredTokens = keepIndices.map(i => allTokens[i])
 
-      // Rebuild attention matrix keeping only rows/cols for non-special tokens
       const fullMatrix: number[][] = data.patterns[0].attention_matrix
       const filteredMatrix = keepIndices.map(row =>
         keepIndices.map(col => fullMatrix[row]?.[col] ?? 0)
@@ -81,18 +78,17 @@ export default function SelfAttentionScreen({
   }
 
   const activeToken = tokens[queryToken] ?? ""
-  const currentHead = head === null ? "avg" : head + 1
 
   return (
     <div className="grid grid-cols-[2fr_1fr] gap-10">
 
+      {/* ── LEFT: unchanged ── */}
       <div className="flex flex-col gap-6">
 
         <p className="text-zinc-400 text-sm">
           CLICK A TOKEN TO SEE WHICH OTHER TOKENS IT PAYS ATTENTION TO
         </p>
 
-        {/* Head selector */}
         <div className="flex items-center gap-4">
           <button
             onClick={() => setHead(h => Math.max(0, h - 1))}
@@ -113,21 +109,18 @@ export default function SelfAttentionScreen({
           </button>
         </div>
 
-        {/* Error state */}
         {error && (
           <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
             {error}
           </div>
         )}
 
-        {/* Loading state */}
         {loading && (
           <div className="text-zinc-500 text-sm animate-pulse">
             Fetching attention patterns...
           </div>
         )}
 
-        {/* Token selector */}
         {!loading && tokens.length > 0 && (
           <div className="flex flex-wrap gap-3">
             {tokens.map((token, i) => (
@@ -147,7 +140,7 @@ export default function SelfAttentionScreen({
         )}
 
         <FlowArrow />
-        {/* Formula */}
+
         <div className="flex items-center justify-center gap-4 text-sm flex-wrap">
           <div className="px-3 py-2 bg-blue-500/20 text-blue-300 rounded font-mono">
             Q_{activeToken}
@@ -166,7 +159,6 @@ export default function SelfAttentionScreen({
           </div>
         </div>
 
-        {/* Attention bars */}
         {!loading && tokens.length > 0 && (
           <>
             <div className="text-sm text-zinc-400">
@@ -198,58 +190,86 @@ export default function SelfAttentionScreen({
 
       </div>
 
-      {/* Right panel */}
-      <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col h-full">
-        <div className="flex flex-col gap-4">
+      {/* ── RIGHT PANEL ── */}
+      <div className="w-full shrink-0 bg-[#0e0e11] border border-[#1e1e24] rounded-2xl p-5 flex flex-col gap-5">
 
-          <h2 className="text-xl font-semibold">Self-Attention</h2>
-
-          <p className="text-zinc-400 text-sm leading-relaxed">
-            The Query vector for the selected token is compared with the
-            Key vectors of every token using a dot product.
-            The resulting scores are normalized with softmax to produce
-            attention weights.
-          </p>
-
-          <p className="text-zinc-400 text-sm leading-relaxed">
-            Attention weights show how important each token is when processing
-            the selected token. Higher weights mean the model focuses more on
-            that token.
-          </p>
-
-          <div className="bg-[#1c1c1f] p-3 rounded text-sm font-mono">
-            weights = softmax(QKᵀ / √dₖ)
+        <div>
+          <div className="text-sm font-semibold text-zinc-100 mb-1">Masked Self-Attention</div>
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            Each token computes how much it should attend to every other token , but only to tokens that came before it, never ahead.
           </div>
+        </div>
 
-          {/* Live stats */}
-          {!loading && tokens.length > 0 && attentionMatrix[queryToken] && (
-            <div className="bg-[#1c1c1f] p-3 rounded text-sm flex flex-col gap-1">
-              <div className="text-zinc-500 text-xs mb-1">LIVE — layer {layer}, head {head + 1}</div>
-              <div className="text-zinc-300">
-                Top token:{" "}
-                <span className="text-purple-400">
+        {/* steps */}
+        <div className="flex flex-col gap-3 text-xs">
+          {[
+            { color: "bg-blue-400",   label: "Dot product of Q and K matrices produces a square score matrix , every token pair gets a raw relationship score" },
+            { color: "bg-amber-400",  label: "Scores are scaled by √dₖ to keep gradients stable, then the upper triangle is masked to −∞ so future tokens are invisible" },
+            { color: "bg-purple-400", label: "Softmax converts each row into probabilities summing to 1 which shows how much each past token is attended to" },
+            { color: "bg-zinc-500",   label: "Dropout optionally zeros out some weights during training to prevent over-reliance on specific token pairs" },
+          ].map(({ color, label }, i) => (
+            <div key={i} className="flex items-start gap-2.5">
+              <div className={`w-4 h-4 rounded-full ${color} shrink-0 mt-0.5 opacity-80`} />
+              <span className="text-zinc-400 leading-relaxed">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* formula */}
+        <div className="border border-[#1e1e24] rounded-xl p-3 flex flex-col gap-2">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase">Formula</div>
+          <div className="font-mono text-xs text-zinc-400">
+            softmax(<span className="text-blue-400">Q</span><span className="text-zinc-600">·</span><span className="text-red-400">K</span><sup className="text-zinc-500 text-[9px]">ᵀ</sup> <span className="text-zinc-600">/</span> <span className="text-amber-400">√dₖ</span> <span className="text-zinc-600">+ mask</span>) · <span className="text-green-400">V</span>
+          </div>
+          <div className="text-[11px] text-zinc-600 leading-relaxed">
+            Dividing by √dₖ prevents the dot products from growing too large in high dimensions, which would push softmax into near-zero gradient regions.
+          </div>
+        </div>
+
+        {/* live stats */}
+        {!loading && tokens.length > 0 && attentionMatrix[queryToken] && (
+          <div className="border border-[#1e1e24] rounded-xl p-3 flex flex-col gap-2">
+            <div className="text-[10px] tracking-widest text-zinc-600 uppercase">
+              Live · layer {layer}, head {head + 1}
+            </div>
+            <div className="flex flex-col gap-1.5 text-xs font-mono">
+              <div className="flex justify-between">
+                <span className="text-zinc-600">query token</span>
+                <span className="text-purple-300">"{activeToken}"</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-600">top attended</span>
+                <span className="text-purple-300">
                   "{tokens[attentionMatrix[queryToken].indexOf(Math.max(...attentionMatrix[queryToken]))]}"
                 </span>
               </div>
-              <div className="text-zinc-300">
-                Max weight:{" "}
-                <span className="text-purple-400">
+              <div className="flex justify-between">
+                <span className="text-zinc-600">max weight</span>
+                <span className="text-purple-300">
                   {(Math.max(...attentionMatrix[queryToken]) * 100).toFixed(1)}%
                 </span>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
+        {/* mask note */}
+        <div className="border-t border-[#1e1e24] pt-4 flex flex-col gap-1">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase">Why mask?</div>
+          <div className="text-[11px] text-zinc-600 leading-relaxed">
+            GPT-2 is a causal language model so it predicts the next token without seeing the future. The mask sets future positions to −∞ before softmax, collapsing them to 0% attention.
+          </div>
         </div>
 
-        <div className="flex justify-end mt-auto pt-6">
+        <div className="mt-auto flex justify-end">
           <button
             onClick={() => setStepIndex(stepIndex + 1)}
-            className="border border-[#2a2a2e] px-5 py-2 rounded-lg hover:bg-[#1c1c1f]"
+            className="px-4 py-2 rounded-lg text-xs border border-[#2a2a2e] text-zinc-400 hover:bg-[#1a1a20] hover:text-zinc-200 transition"
           >
             Next →
           </button>
         </div>
+
       </div>
 
     </div>

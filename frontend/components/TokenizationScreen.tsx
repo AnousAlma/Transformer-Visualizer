@@ -78,10 +78,7 @@ export default function TokenizationScreen({
 
       setVisibleTokens(prev => {
         const next = [...prev, tokens[i]]
-
-        // mark newest token
         setLatestIndex(next.length - 1)
-
         return next
       })
 
@@ -94,10 +91,9 @@ export default function TokenizationScreen({
 
 
   return (
-
     <div className="grid grid-cols-[2fr_1fr] gap-10">
 
-      {/* LEFT SIDE */}
+      {/* LEFT SIDE (UNCHANGED) */}
       <div className="flex flex-col items-center gap-8">
 
         <div className="text-zinc-500 text-sm w-full text-left">
@@ -150,36 +146,80 @@ export default function TokenizationScreen({
 
       </div>
 
-      {/* RIGHT PANEL */}
-      <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col gap-4">
+      <div className="bg-[#0e0e11] border border-[#1e1e24] rounded-2xl p-5 flex flex-col gap-6">
 
-        <h2 className="text-xl font-semibold">
-          Tokenization
-        </h2>
-
-        <p className="text-zinc-400 text-sm leading-relaxed">
-          Your text is split into tokens, the basic units the model reads.
-        </p>
-
-        <div className="bg-[#1c1c1f] p-3 rounded text-sm font-mono">
-          Input → [t1, t2, … t{visibleTokens.length - 1}]
+        {/* HEADER */}
+        <div>
+          <div className="text-sm font-semibold text-zinc-100 mb-1">
+            Tokenization
+          </div>
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            Text is broken into smaller units called tokens that the model can process.
+          </div>
         </div>
 
-        <div className="flex justify-end pt-6">
+        {/* WHAT TOKENS ARE */}
+        <div className="border border-[#1e1e24] rounded-xl p-3">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase mb-1">
+            What is a Token?
+          </div>
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            Tokens can be full words, subwords, or even punctuation.  
+            For example:
+          </div>
+          <div className="font-mono text-xs text-zinc-400 mt-2">
+            "empowers" → ["em", "powers"]
+          </div>
+        </div>
 
+        {/* VOCAB */}
+        <div className="border border-[#1e1e24] rounded-xl p-3">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase mb-1">
+            Vocabulary
+          </div>
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            GPT-2 uses a fixed vocabulary of:
+          </div>
+          <div className="font-mono text-xs text-zinc-400 mt-1">
+            50,257 tokens
+          </div>
+          <div className="text-xs text-zinc-500 mt-2">
+            This vocabulary is learned before training and reused for all inputs.
+          </div>
+        </div>
+
+        {/* WHY IT MATTERS */}
+        <div className="border border-[#1e1e24] rounded-xl p-3">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase mb-1">
+            Why Tokenization Matters
+          </div>
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            Tokens are the bridge between raw text and math — they allow language to be converted into vectors that neural networks can process.
+          </div>
+        </div>
+
+        {/* TRANSITION */}
+        <div className="border border-[#1e1e24] rounded-xl p-3">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase mb-1">
+            Next Step
+          </div>
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            Each token will be mapped to an ID, which is then used to retrieve its embedding vector.
+          </div>
+        </div>
+
+        {/* BUTTON */}
+        <div className="mt-auto flex justify-end">
           <button
             onClick={() => setStepIndex(stepIndex + 1)}
-            className={`border border-[#2a2a2e] px-5 py-2 rounded-lg transition
-              ${
-                finished
-                  ? "bg-purple-600 text-white animate-pulse"
-                  : "hover:bg-[#1c1c1f]"
-              }
-            `}
+            className={`px-4 py-2 rounded-lg text-xs border border-[#2a2a2e] transition ${
+              finished
+                ? "bg-purple-600 text-white animate-pulse"
+                : "text-zinc-400 hover:bg-[#1a1a20]"
+            }`}
           >
             Next →
           </button>
-
         </div>
 
       </div>

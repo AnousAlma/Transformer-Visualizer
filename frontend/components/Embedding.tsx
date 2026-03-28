@@ -23,10 +23,8 @@ export default function Embedding({
   const [finished, setFinished] = useState(false)
 
   const [visibleCount, setVisibleCount] = useState(0)
-
   const [lookupDim, setLookupDim] = useState<number | null>(null)
 
-  // Fetch embeddings
   useEffect(() => {
     if (inputText.trim().length === 0) {
       setTokens([])
@@ -140,7 +138,7 @@ export default function Embedding({
   return (
     <div className="grid grid-cols-[2fr_1fr] gap-10">
 
-      {/* LEFT */}
+      {/* LEFT (UNCHANGED) */}
       <div className="flex flex-col items-center gap-8">
 
         <div className="text-zinc-400 text-sm text-center">
@@ -169,7 +167,6 @@ export default function Embedding({
             ))}
           </div>
         )}
-
 
         {tokens.length > 0 && !loading && (
           <div className="text-sm text-zinc-400 text-center">
@@ -210,11 +207,8 @@ export default function Embedding({
           </button>
         </div>
 
-        {/* VISUALIZATION */}
         <div className="w-full max-w-3xl bg-[#151517] p-4 rounded-xl border border-[#2a2a2e]">
-
           {viewMode === "heatmap" && renderHeatmap(currentEmbedding)}
-
           {viewMode === "topk" && (
             <div className="flex flex-col gap-3">
               {getTopK(currentEmbedding).map(({ v, i }) => (
@@ -227,46 +221,76 @@ export default function Embedding({
               ))}
             </div>
           )}
-
         </div>
 
       </div>
 
-      {/* RIGHT */}
-      <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col">
+      <div className="bg-[#0e0e11] border border-[#1e1e24] rounded-2xl p-5 flex flex-col gap-6">
 
-        <div className="flex flex-col gap-4">
-
-          <h2 className="text-xl font-semibold">Embeddings</h2>
-
-          <p className="text-zinc-400 text-sm leading-relaxed">
-            Each token is mapped to a 768-dimensional vector. Similar tokens have similar patterns.
-          </p>
-
-          <div className="bg-[#1c1c1f] p-3 rounded text-sm font-mono">
-            E = Lookup(id) <br />
-            X ∈ ℝ^(n×768)
+        {/* HEADER */}
+        <div>
+          <div className="text-sm font-semibold text-zinc-100 mb-1">
+            Token Embeddings
           </div>
-
-          <div className="flex items-center gap-4 text-zinc-400 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-purple-500" />
-              <span>Positive</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-orange-400" />
-              <span>Negative</span>
-            </div>
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            Each token is converted into a high-dimensional vector representing meaning and context.
           </div>
-
         </div>
 
-        <div className="flex justify-end mt-auto pt-6">
+        {/* CORE IDEA */}
+        <div className="border border-[#1e1e24] rounded-xl p-3">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase mb-2">
+            How It Works
+          </div>
+          <div className="text-xs text-zinc-500">
+            Each token ID is mapped to a learned vector from an embedding table.
+          </div>
+          <div className="font-mono text-xs text-zinc-400 mt-2">
+            E = Lookup(token_id)
+          </div>
+        </div>
+
+        {/* POSITIONAL ENCODING */}
+        <div className="border border-[#1e1e24] rounded-xl p-3">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase mb-1">
+            Positional Encoding
+          </div>
+          <div className="text-xs text-zinc-500">
+            The model adds positional information so it understands token order in the sequence.
+          </div>
+        </div>
+
+        {/* FINAL EMBEDDING */}
+        <div className="border border-[#1e1e24] rounded-xl p-3">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase mb-1">
+            Final Embedding
+          </div>
+          <div className="text-xs text-zinc-500">
+            Token embedding + positional encoding → final vector used by the transformer.
+          </div>
+        </div>
+
+        {/* LEGEND */}
+        <div className="flex gap-4 text-xs text-zinc-400">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-purple-500 rounded" />
+            Positive
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-orange-400 rounded" />
+            Negative
+          </div>
+        </div>
+
+        {/* NEXT BUTTON */}
+        <div className="mt-auto flex justify-end">
           <button
             onClick={() => setStepIndex(stepIndex + 1)}
-            className={`border border-[#2a2a2e] px-5 py-2 rounded-lg transition
-              ${finished ? "bg-purple-600 text-white animate-pulse" : "hover:bg-[#1c1c1f]"}`}
+            className={`px-4 py-2 rounded-lg text-xs border border-[#2a2a2e] transition ${
+              finished
+                ? "bg-purple-600 text-white animate-pulse"
+                : "text-zinc-400 hover:bg-[#1a1a20]"
+            }`}
           >
             Next →
           </button>

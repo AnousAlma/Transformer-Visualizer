@@ -13,13 +13,11 @@ function MatMulIntro({ tokens, valueVec, onDone }: {
   const CELL = 38
   const GAP = 4
 
-  // attention weight values (same formula as main matrix)
   function getWeight(i: number, j: number) {
     if (j > i) return 0
     return Math.abs(Math.sin((i + 1) * (j + 2)))
   }
 
-  // result = weighted sum of value vector rows (simplified: row i = weight[i] * V[i%VEC_DIMS])
   function getResult(i: number) {
     let sum = 0
     for (let j = 0; j <= i && j < COLS; j++) {
@@ -41,7 +39,6 @@ function MatMulIntro({ tokens, valueVec, onDone }: {
 
     const sweepRow = () => {
       if (row >= ROWS) {
-        // pause then call onDone
         setTimeout(() => {
           setPhase("done")
           setTimeout(() => {
@@ -55,14 +52,12 @@ function MatMulIntro({ tokens, valueVec, onDone }: {
       setActiveRow(row)
       setActiveVecCell(-1)
 
-      // sweep through vec dims for this row
       let col = 0
       const colTimer = setInterval(() => {
         setActiveVecCell(col)
         col++
         if (col >= VEC_DIMS) {
           clearInterval(colTimer)
-          // fill result cell
           const r = row
           setFilledResults(prev => [...prev, r])
           row++
@@ -88,9 +83,7 @@ function MatMulIntro({ tokens, valueVec, onDone }: {
 
       <div className="flex items-center gap-6">
 
-        {/* ATTENTION WEIGHT MATRIX */}
         <div className="flex flex-col" style={{ gap: GAP }}>
-          {/* col labels */}
           <div className="flex" style={{ gap: GAP, paddingLeft: 32 }}>
             {Array.from({ length: COLS }).map((_, j) => (
               <div key={j} style={{ width: CELL, fontSize: 9 }}
@@ -102,7 +95,6 @@ function MatMulIntro({ tokens, valueVec, onDone }: {
 
           {Array.from({ length: ROWS }).map((_, i) => (
             <div key={i} className="flex items-center" style={{ gap: GAP }}>
-              {/* row label */}
               <div style={{ width: 28, fontSize: 9 }}
                 className="text-right text-zinc-600 truncate shrink-0 pr-1">
                 {tokens[i]?.slice(0, 4)}
@@ -137,10 +129,8 @@ function MatMulIntro({ tokens, valueVec, onDone }: {
           ))}
         </div>
 
-        {/* × */}
         <div className="text-2xl text-zinc-500 font-light shrink-0">×</div>
 
-        {/* VALUE VECTOR (vertical, VEC_DIMS rows × 1 col) */}
         <div className="flex flex-col items-center gap-1">
           <div className="text-[9px] text-zinc-600 uppercase tracking-widest mb-1">V</div>
           {Array.from({ length: VEC_DIMS }).map((_, i) => {
@@ -165,10 +155,8 @@ function MatMulIntro({ tokens, valueVec, onDone }: {
           })}
         </div>
 
-        {/* = */}
         <div className="text-2xl text-zinc-500 font-light shrink-0">=</div>
 
-        {/* RESULT VECTOR */}
         <div className="flex flex-col items-center gap-1">
           <div className="text-[9px] text-zinc-600 uppercase tracking-widest mb-1">Out</div>
           {Array.from({ length: ROWS }).map((_, i) => {
@@ -202,10 +190,6 @@ function MatMulIntro({ tokens, valueVec, onDone }: {
   )
 }
 
-
-/* =========================
-   Attention Matrix (main view)
-========================= */
 function AttentionMatrix({
   tokens, selectedToken, visible
 }: {
@@ -255,9 +239,6 @@ function AttentionMatrix({
   )
 }
 
-/* =========================
-   Vector Heatmap
-========================= */
 function VectorHeatmap({
   data, color, lookupDim, setLookupDim, visible
 }: {
@@ -293,9 +274,6 @@ function generateVector(seedStr: string, length = 64) {
   return Array.from({ length }, (_, i) => Math.sin(seed * (i + 1)) * 0.6)
 }
 
-/* =========================
-   MAIN COMPONENT
-========================= */
 export default function AttentionOutScreen({
   stepIndex, setStepIndex, inputText, layer
 }: {
@@ -310,7 +288,6 @@ export default function AttentionOutScreen({
   const [showIntro, setShowIntro] = useState(true)
   const introShownRef = useRef(false)
 
-  /* TOKEN FETCH */
   useEffect(() => {
     if (!inputText.trim()) return
     const run = async () => {
@@ -329,7 +306,6 @@ export default function AttentionOutScreen({
     run()
   }, [inputText])
 
-  /* VALUE VECTOR FETCH */
   useEffect(() => {
     if (!tokens.length) return
     const run = async () => {
@@ -349,7 +325,6 @@ export default function AttentionOutScreen({
     run()
   }, [tokens, selectedToken, layer, inputText])
 
-  /* STAGE ANIMATION — only after intro is done */
   useEffect(() => {
     if (!tokens.length || showIntro) return
     setStage(0)
@@ -359,7 +334,6 @@ export default function AttentionOutScreen({
     setTimeout(() => setStage(4), 950)
   }, [tokens, selectedToken, showIntro])
 
-  /* intro only plays once on first open */
   const handleIntroDone = () => {
     introShownRef.current = true
     setShowIntro(false)
@@ -371,15 +345,15 @@ export default function AttentionOutScreen({
   const lookupV = lookupDim != null ? valueVec[lookupDim] : null
 
   return (
-    <div className="flex w-full gap-10">
+    <div className="flex w-full gap-8 h-full">
 
+      {/* ── LEFT: main view ── */}
       <div className="flex-1 flex flex-col items-center">
 
         <div className="text-zinc-400 text-base mb-8 tracking-wide">
           APPLY ATTENTION TO PRODUCE OUTPUT
         </div>
 
-        {/* INTRO: matmul animation */}
         {showIntro && tokens.length > 0 && valueVec.length > 0 && (
           <MatMulIntro
             tokens={tokens}
@@ -388,12 +362,10 @@ export default function AttentionOutScreen({
           />
         )}
 
-        {/* MAIN VIEW: fades in after intro */}
         <div
           className="w-full flex flex-col items-center transition-opacity duration-500"
           style={{ opacity: showIntro ? 0 : 1, pointerEvents: showIntro ? "none" : "auto" }}
         >
-          {/* TOKENS */}
           <div className="flex gap-4 mb-12 flex-wrap justify-center">
             {tokens.map((t, i) => (
               <button key={i} onClick={() => setSelectedToken(i)}
@@ -414,7 +386,6 @@ export default function AttentionOutScreen({
                 Token: <span className="text-purple-400 font-medium">{tokens[selectedToken]}</span>
               </div>
 
-              {/* MATRIX × VALUE VECTOR side by side */}
               <div className="flex items-center gap-5">
 
                 <div className="flex flex-col items-center gap-3">
@@ -483,18 +454,64 @@ export default function AttentionOutScreen({
         </div>
       </div>
 
-      {/* RIGHT PANEL — untouched */}
-      <div className="w-[320px] bg-[#111114] border border-[#2a2a2e] rounded-2xl p-6 flex flex-col">
-        <div className="text-lg font-semibold mb-4">Attention Output</div>
-        <p className="text-sm text-zinc-400 mb-4">Each token attends to previous tokens using attention weights.</p>
-        <p className="text-sm text-zinc-400 mb-6">These weights scale the value vectors and are summed to produce the output.</p>
-        <div className="bg-[#1a1a1f] rounded-lg px-4 py-3 text-sm text-zinc-300 mb-3">Showing 64 dimensions</div>
-        <div className="flex justify-end mt-auto pt-6">
-          <button onClick={() => setStepIndex(stepIndex + 1)}
-            className="px-5 py-2 rounded-lg text-sm border border-[#2a2a2e] text-zinc-300 hover:bg-[#1c1c22] transition">
+      {/* ── RIGHT PANEL ── */}
+      <div className="w-[280px] shrink-0 bg-[#0e0e11] border border-[#1e1e24] rounded-2xl p-5 flex flex-col gap-5">
+
+        <div>
+          <div className="text-sm font-semibold text-zinc-100 mb-1">Output & Concatenation</div>
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            Attention scores are used to compute a weighted sum of the Value vectors, producing the final output of the self-attention mechanism.
+          </div>
+        </div>
+
+        {/* steps */}
+        <div className="flex flex-col gap-3 text-xs">
+          {[
+            { color: "bg-purple-400", label: "Masked attention scores (lower triangle only) are multiplied with the Value matrix V" },
+            { color: "bg-green-400",  label: "Each row of V is scaled by its attention weight and summed — tokens that were attended to more contribute more" },
+            { color: "bg-violet-400", label: "The result is a new 64-dim vector per token, enriched with context from earlier tokens" },
+          ].map(({ color, label }, i) => (
+            <div key={i} className="flex items-start gap-2.5">
+              <div className={`w-4 h-4 rounded-full ${color} shrink-0 mt-0.5 opacity-80`} />
+              <span className="text-zinc-400 leading-relaxed">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* multi-head note */}
+        <div className="border border-[#1e1e24] rounded-xl p-3 flex flex-col gap-2">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase">Multi-Head Attention</div>
+          <div className="text-[11px] text-zinc-500 leading-relaxed">
+            GPT-2 runs <span className="text-zinc-300">12 attention heads</span> in parallel, each with its own Q, K, and V matrices. Each head learns to attend to different kinds of relationships , one might focus on syntax, another on semantics.
+          </div>
+        </div>
+
+        {/* concat note */}
+        <div className="border border-[#1e1e24] rounded-xl p-3 flex flex-col gap-2">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase">Concatenation</div>
+          <div className="text-[11px] text-zinc-500 leading-relaxed">
+            The 12 head outputs are concatenated into a single wide vector, then projected back down through a linear layer which merges all the different perspectives into one unified representation.
+          </div>
+        </div>
+
+        {/* heads count */}
+        <div className="border-t border-[#1e1e24] pt-4 flex flex-col gap-1">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase">Attention Heads</div>
+          <div className="font-mono text-2xl text-zinc-300 font-semibold">12</div>
+          <div className="text-[11px] text-zinc-600 leading-relaxed">
+            Each head sees the full sequence but attends to different parts. Their outputs are merged after.
+          </div>
+        </div>
+
+        <div className="mt-auto flex justify-end">
+          <button
+            onClick={() => setStepIndex(stepIndex + 1)}
+            className="px-4 py-2 rounded-lg text-xs border border-[#2a2a2e] text-zinc-400 hover:bg-[#1a1a20] hover:text-zinc-200 transition"
+          >
             Next →
           </button>
         </div>
+
       </div>
 
     </div>

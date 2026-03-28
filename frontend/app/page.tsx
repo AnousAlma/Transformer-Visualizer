@@ -10,6 +10,8 @@ import SelfAttentionScreen from "@/components/SelfAttentionScreen"
 import AttentionOutScreen from "@/components/AttentionOutScreen"
 import MLPScreen from "@/components/MLPResidual"
 import ProbabilitiesScreen from "@/components/OutputScreen"
+import CalculatingProbScreen from "@/components/CalculatingProb"
+
 
 export default function Home() {
 
@@ -21,6 +23,7 @@ export default function Home() {
     "Self-Attention",
     "Attention Out",
     "MLP",
+    "Calculating the Probabilities",
     "Output"
   ]
 
@@ -164,7 +167,8 @@ export default function Home() {
           {stepIndex === 4 && <SelfAttentionScreen stepIndex={stepIndex} setStepIndex={setStepIndex} inputText={inputText} layer={layer} />}
           {stepIndex === 5 && <AttentionOutScreen stepIndex={stepIndex} setStepIndex={setStepIndex} inputText={inputText} layer={layer} />}
           {stepIndex === 6 && <MLPScreen stepIndex={stepIndex} setStepIndex={setStepIndex} inputText={inputText} />}
-          {stepIndex === 7 && <ProbabilitiesScreen inputText={inputText} />}
+          {stepIndex === 7 && <CalculatingProbScreen stepIndex={stepIndex} setStepIndex={setStepIndex} inputText={inputText} />}
+          {stepIndex === 8 && <ProbabilitiesScreen inputText={inputText} />}
 
         </div>
 

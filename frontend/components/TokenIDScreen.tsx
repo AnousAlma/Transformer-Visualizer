@@ -62,7 +62,6 @@ export default function TokenIDScreen({
     tokenize()
   }, [inputText])
 
- 
   useEffect(() => {
     if (tokenIDs.length === 0) return
 
@@ -74,7 +73,6 @@ export default function TokenIDScreen({
     const interval = setInterval(() => {
       if (i >= tokenIDs.length) {
         clearInterval(interval)
-
         setTimeout(() => setFinished(true), 250)
         return
       }
@@ -94,10 +92,9 @@ export default function TokenIDScreen({
   const activeIndex = currentStep
 
   return (
-
     <div className="grid grid-cols-[2fr_1fr] gap-10">
 
-      {/* LEFT */}
+      {/* LEFT (UNCHANGED) */}
       <div className="flex flex-col items-center gap-8">
 
         <div className="text-zinc-400 text-sm text-center">
@@ -109,7 +106,6 @@ export default function TokenIDScreen({
 
         {!loading && !error && (
           <div className="flex flex-wrap justify-center gap-4 max-w-3xl">
-
             {tokens.map((token, i) => (
               <div
                 key={i}
@@ -127,13 +123,10 @@ export default function TokenIDScreen({
                 </div>
               </div>
             ))}
-
           </div>
         )}
 
-        {/* FLOW */}
         <div className="flex flex-col items-center gap-4">
-
           <FlowArrow />
 
           <div className="text-sm text-zinc-400 text-center">
@@ -141,14 +134,13 @@ export default function TokenIDScreen({
           </div>
 
           <div className="bg-[#151517] border border-[#2a2a2e] rounded-lg p-4 flex flex-col gap-2">
-
             <div className="text-xs text-zinc-500 mb-2">
               Embedding Matrix (~50k × 768) — showing a tiny slice
             </div>
 
             {filledRows.map((i) => {
               const id = tokenIDs[i]
-              if (id === undefined) return null 
+              if (id === undefined) return null
 
               return (
                 <div
@@ -174,53 +166,82 @@ export default function TokenIDScreen({
                 </div>
               )
             })}
-
           </div>
-
         </div>
-
       </div>
 
-      {/* RIGHT PANEL */}
-      <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col">
+      <div className="bg-[#0e0e11] border border-[#1e1e24] rounded-2xl p-5 flex flex-col gap-6">
 
-        <div className="flex flex-col gap-4">
-
-          <h2 className="text-xl font-semibold">
-            Token IDs
-          </h2>
-
-          <p className="text-zinc-400 text-sm leading-relaxed">
-            Each token maps to an integer index in the vocabulary (~100k tokens).
-          </p>
-
-          {activeIndex >= 0 && (
-            <div className="bg-[#1c1c1f] p-3 rounded text-sm font-mono">
-              "{tokens[activeIndex]}" → {tokenIDs[activeIndex]}
-            </div>
-          )}
-
-          <div className="border-l-2 border-purple-500 pl-4 text-zinc-400 text-sm">
-            These IDs select a row in the embedding matrix.
+        {/* HEADER */}
+        <div>
+          <div className="text-sm font-semibold text-zinc-100 mb-1">
+            Token IDs → Embeddings
           </div>
-
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            Each token is mapped to a unique integer ID, which selects a row in the embedding matrix.
+          </div>
         </div>
 
-        <div className="flex justify-end mt-auto pt-6">
+        {/* EXAMPLE */}
+        {activeIndex >= 0 && (
+          <div className="border border-[#1e1e24] rounded-xl p-3">
+            <div className="text-[10px] tracking-widest text-zinc-600 uppercase mb-1">
+              Example
+            </div>
+            <div className="font-mono text-xs text-zinc-400">
+              "{tokens[activeIndex]}" → {tokenIDs[activeIndex]}
+            </div>
+          </div>
+        )}
 
+        {/* MATRIX INFO */}
+        <div className="border border-[#1e1e24] rounded-xl p-3">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase mb-1">
+            Embedding Matrix
+          </div>
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            GPT-2 stores all token embeddings in a large matrix of size:
+          </div>
+          <div className="font-mono text-xs text-zinc-400 mt-1">
+            (50,257 × 768)
+          </div>
+          <div className="text-xs text-zinc-500 mt-2">
+            That’s ~39 million learned parameters.
+          </div>
+        </div>
+
+        {/* SEMANTICS */}
+        <div className="border border-[#1e1e24] rounded-xl p-3">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase mb-1">
+            Semantic Meaning
+          </div>
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            Tokens with similar meaning or usage are placed close together in this high-dimensional space.
+          </div>
+        </div>
+
+        {/* KEY IDEA */}
+        <div className="border border-[#1e1e24] rounded-xl p-3">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase mb-1">
+            Key Insight
+          </div>
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            Token IDs themselves have no meaning , they are just pointers into a learned vector space.
+          </div>
+        </div>
+
+        {/* NEXT BUTTON */}
+        <div className="mt-auto flex justify-end">
           <button
             onClick={() => setStepIndex(stepIndex + 1)}
-            className={`border border-[#2a2a2e] px-5 py-2 rounded-lg transition
-              ${
-                finished
-                  ? "bg-purple-600 text-white animate-pulse"
-                  : "hover:bg-[#1c1c1f]"
-              }
-            `}
+            className={`px-4 py-2 rounded-lg text-xs border border-[#2a2a2e] transition ${
+              finished
+                ? "bg-purple-600 text-white animate-pulse"
+                : "text-zinc-400 hover:bg-[#1a1a20]"
+            }`}
           >
             Next →
           </button>
-
         </div>
 
       </div>

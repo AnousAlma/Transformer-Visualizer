@@ -33,7 +33,6 @@ export default function QKVScreen({
   const [loadingQKV, setLoadingQKV] = useState(true)
   const [finished, setFinished] = useState(false)
 
-  // track whether the latest QKV fetch was triggered by a layer switch
   const isLayerSwitch = useRef(false)
 
   useEffect(() => {
@@ -130,12 +129,10 @@ export default function QKVScreen({
   useEffect(() => {
     if (!embedding.length || !Q.length) return
 
-    // Layer switch: skip embedding + weights animation, only replay QKV heatmap
     if (isLayerSwitch.current) {
       setQkvVisible(0)
       setFinished(false)
 
-      // ensure embedding and weights stay fully visible
       setVisibleCount(768)
       setWeightVisible(4)
 
@@ -152,7 +149,6 @@ export default function QKVScreen({
       return () => clearInterval(qInterval)
     }
 
-    // Full animation: token switch or initial load
     setVisibleCount(0)
     setWeightVisible(0)
     setQkvVisible(0)
@@ -284,14 +280,13 @@ export default function QKVScreen({
   return (
     <div className="grid grid-cols-[2fr_1fr] gap-10">
 
-      {/* LEFT */}
+      {/* ── LEFT: unchanged ── */}
       <div className="flex flex-col items-center gap-8">
 
         <div className="text-zinc-400 text-sm">
           EMBEDDING → Q · K · V TRANSFORMATION
         </div>
 
-        {/* TOKENS */}
         <div className="flex gap-3">
           {tokens.map((t,i)=>(
             <button
@@ -306,31 +301,26 @@ export default function QKVScreen({
           ))}
         </div>
 
-        {/* EMBEDDING */}
         <EmbeddingMap />
 
-        {/* × */}
         <div className={`text-3xl ${
           weightVisible > 0 ? "opacity-100 text-purple-400" : "opacity-0"
         }`}>
           ×
         </div>
 
-        {/* WEIGHTS */}
         <div className="flex gap-8">
           <WeightBlocks color="rgba(59,130,246," label="W_Q"/>
           <WeightBlocks color="rgba(239,68,68," label="W_K"/>
           <WeightBlocks color="rgba(34,197,94," label="W_V"/>
         </div>
 
-        {/* = */}
         <div className={`text-3xl ${
           weightVisible >= 4 ? "opacity-100 text-purple-400" : "opacity-0"
         }`}>
           =
         </div>
 
-        {/* QKV */}
         {!loadingQKV && (
           <div className="flex gap-12">
             <Heatmap data={Q} color="rgba(59,130,246," label="Query (Q) — 64 dims"/>
@@ -339,7 +329,6 @@ export default function QKVScreen({
           </div>
         )}
 
-        {/* LOOKUP */}
         <div className="flex gap-3 items-center">
           <input
             type="number"
@@ -361,24 +350,67 @@ export default function QKVScreen({
 
       </div>
 
-      {/* RIGHT */}
-      <div className="bg-[#151517] border border-[#2a2a2e] rounded-xl p-6 flex flex-col">
+      {/* ── RIGHT PANEL ── */}
+      <div className="w-full shrink-0 bg-[#0e0e11] border border-[#1e1e24] rounded-2xl p-5 flex flex-col gap-5">
 
-        <h2 className="text-xl font-semibold mb-4">How QKV is Computed</h2>
-
-        <div className="bg-[#1c1c1f] p-3 rounded font-mono text-sm">
-          Q_j = Σ X_i · W_Q[i,j] <br/>
-          K_j = Σ X_i · W_K[i,j] <br/>
-          V_j = Σ X_i · W_V[i,j]
+        <div>
+          <div className="text-sm font-semibold text-zinc-100 mb-1">Query, Key & Value</div>
+          <div className="text-xs text-zinc-500 leading-relaxed">
+            Each token's embedding is linearly projected into three separate vectors ,which are Q, K, and V by using learned weight matrices.
+          </div>
         </div>
 
-        <div className="mt-auto pt-6 flex justify-end">
+        {/* Q K V explanations */}
+        <div className="flex flex-col gap-3 text-xs">
+          {[
+            { color: "bg-blue-400",  label: "Query (Q)", desc: "What this token is looking for , like the search text you type into a search engine" },
+            { color: "bg-red-400",   label: "Key (K)",   desc: "What each token offers , like the title of a search result page that gets matched against the query" },
+            { color: "bg-green-400", label: "Value (V)", desc: "The actual content , once Q and K are matched, V is the information that gets retrieved and passed forward" },
+          ].map(({ color, label, desc }) => (
+            <div key={label} className="flex items-start gap-2.5">
+              <div className={`w-4 h-4 rounded-full ${color} shrink-0 mt-0.5 opacity-80`} />
+              <span className="text-zinc-400 leading-relaxed">
+                <span className="text-zinc-300">{label} — </span>{desc}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* formula */}
+        <div className="border border-[#1e1e24] rounded-xl p-3 flex flex-col gap-2">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase">Formula</div>
+          <div className="font-mono text-[11px] text-zinc-500 leading-relaxed flex flex-col gap-0.5">
+            <div><span className="text-blue-400">Q</span><sub className="text-[9px]">j</sub> <span className="text-zinc-700">= Σ</span> X<sub className="text-[9px]">i</sub> <span className="text-zinc-700">·</span> <span className="text-blue-400">W_Q</span><sub className="text-[9px]">[i,j]</sub> <span className="text-zinc-700">+ b</span></div>
+            <div><span className="text-red-400">K</span><sub className="text-[9px]">j</sub> <span className="text-zinc-700">= Σ</span> X<sub className="text-[9px]">i</sub> <span className="text-zinc-700">·</span> <span className="text-red-400">W_K</span><sub className="text-[9px]">[i,j]</sub> <span className="text-zinc-700">+ b</span></div>
+            <div><span className="text-green-400">V</span><sub className="text-[9px]">j</sub> <span className="text-zinc-700">= Σ</span> X<sub className="text-[9px]">i</sub> <span className="text-zinc-700">·</span> <span className="text-green-400">W_V</span><sub className="text-[9px]">[i,j]</sub> <span className="text-zinc-700">+ b</span></div>
+          </div>
+          <div className="text-[11px] text-zinc-600 leading-relaxed">
+            Each weight matrix is learned during training and is different per layer , earlier layers capture syntax, deeper layers capture semantics.
+          </div>
+        </div>
+
+        {/* multi-head split */}
+        <div className="border border-[#1e1e24] rounded-xl p-3 flex flex-col gap-2">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase">Multi-Head Splitting</div>
+          <div className="text-[11px] text-zinc-500 leading-relaxed">
+            After computing Q, K, and V, each vector is split into <span className="text-zinc-300">12 heads</span>. Each head independently attends to a different slice of the embedding for example, one might learn grammatical roles, another might track long-range topic references.
+          </div>
+        </div>
+
+        {/* heads stat */}
+        <div className="border-t border-[#1e1e24] pt-4 flex flex-col gap-1">
+          <div className="text-[10px] tracking-widest text-zinc-600 uppercase">Attention Heads</div>
+          <div className="font-mono text-2xl text-zinc-300 font-semibold">12</div>
+          <div className="text-[11px] text-zinc-600 leading-relaxed">
+            Each head sees 64 of the 768 embedding dims. Parallel specialisation gives the model richer representational power than a single head could.
+          </div>
+        </div>
+
+        <div className="mt-auto flex justify-end">
           <button
             onClick={()=>setStepIndex(stepIndex+1)}
-            className={`px-5 py-2 border rounded ${
-              finished
-                ? "bg-purple-600 text-white animate-pulse"
-                : "hover:bg-[#1c1c1f]"
+            className={`px-4 py-2 rounded-lg text-xs border border-[#2a2a2e] text-zinc-400 hover:bg-[#1a1a20] hover:text-zinc-200 transition ${
+              finished ? "border-purple-500/40 text-purple-300" : ""
             }`}
           >
             Next →
