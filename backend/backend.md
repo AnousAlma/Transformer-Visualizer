@@ -138,6 +138,54 @@ response:
 - `head` (optional): specific attention head to extract (None = all heads)
 - `language` (optional, default: "en"): language model to use ("en" or "fr")
 
+### extract attention head out (Attention × Value = Out)
+
+```text
+POST /v1/attention/head-out
+```
+
+request body:
+
+```json
+{
+  "text": "The quick brown fox",
+  "layer": 0,
+  "head": null,
+  "language": "en"
+}
+```
+
+response:
+
+```json
+{
+  "input_text": "The quick brown fox",
+  "tokens": ["The", " quick", " brown", " fox"],
+  "patterns": [
+    {
+      "layer": 0,
+      "head": 0,
+      "attention_matrix": [
+        [0.8, 0.1, 0.05, 0.05],
+        [0.2, 0.6, 0.15, 0.05],
+        [0.1, 0.2, 0.6, 0.1],
+        [0.05, 0.1, 0.2, 0.65]
+      ],
+      "value_vectors": [[0.01, 0.02]],
+      "out_vectors": [[0.01, 0.02]],
+      "out_vector_kind": "reconstructed_from_z"
+    }
+  ]
+}
+```
+
+**Parameters:**
+
+- `text` (required): input text to analyze
+- `layer` (optional): specific layer index to extract (None = all layers)
+- `head` (optional): specific attention head to extract (None = all heads)
+- `language` (optional, default: "en"): language model to use ("en" or "fr")
+
 ### ablation experiment
 
 ```text

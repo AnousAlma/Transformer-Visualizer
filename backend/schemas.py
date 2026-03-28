@@ -57,6 +57,37 @@ class AttentionResponse(BaseModel):
     patterns: List[AttentionPattern]
 
 
+class AttentionHeadOutRequest(BaseModel):
+    """Request head-out data, optionally filtered by layer/head.
+
+    If `layer`/`head` are omitted, returns all layers/heads (like `/v1/attention`).
+    """
+
+    text: str
+    layer: Optional[int] = None
+    head: Optional[int] = None
+    language: str = "en"
+
+
+class AttentionHeadOutPattern(BaseModel):
+    """Head-out data for one (layer, head)."""
+
+    layer: int
+    head: int
+    attention_matrix: List[List[float]]
+    value_vectors: List[List[float]]  # [seq, d_head]
+    out_vectors: List[List[float]]    # [seq, d_model]
+    out_vector_kind: str              # "result" or "reconstructed_from_z"
+
+
+class AttentionHeadOutResponse(BaseModel):
+    """Head-out data for one or more (layer, head) selections."""
+
+    input_text: str
+    tokens: List[str]
+    patterns: List[AttentionHeadOutPattern]
+
+
 class AblationRequest(BaseModel):
     # input text for inference
     text: str
