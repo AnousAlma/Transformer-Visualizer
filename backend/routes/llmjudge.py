@@ -35,17 +35,22 @@ async def judge_output(request: LLMJudgeRequest):
         )
         metric.measure(test_case)
 
-        if metric.score > 0.7:
+        # GEval returns a correctness score (1.0 = fully correct, 0.0 = fully incorrect).
+        # Convert this to a hallucination score so that higher = more hallucination.
+        hallucination_score = 1.0 - metric.score
+
+        if hallucination_score < 0.3:
             conclusion = "low"
-        elif metric.score > 0.3:
+        elif hallucination_score < 0.7:
             conclusion = "medium"
         else:
             conclusion = "high"
         
+        # "passed" is still based on correctness versus the metric's threshold.
         passed = metric.score >= metric.threshold
 
         return LLMJudgeResponse(
-            score=metric.score,
+            score=hallucination_score,
             conclusion=conclusion,
             reason=metric.reason,
             passed=passed
