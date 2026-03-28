@@ -95,10 +95,10 @@ class LLMJudgeRequest(BaseModel):
 
 class LLMJudgeResponse(BaseModel):
     # hallucination metric info
-    score: float # 0-1, higher = more hallucination
-    conclusion: str # "low", "medium", "high"
-    reason: str # explanation from judge model
-    passed: bool # if above threshold, True. else, False
+    score: float  # 0-1, higher = more correct / less hallucination
+    conclusion: str  # "low", "medium", "high"
+    reason: str  # explanation from judge model
+    passed: bool  # True if the score meets the acceptance threshold
       
 class QKVVectors(BaseModel):
     # QKV vectors for a specific token position
