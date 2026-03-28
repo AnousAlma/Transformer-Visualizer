@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 
 class InferenceRequest(BaseModel):
@@ -75,7 +75,7 @@ class AttentionHeadOutPattern(BaseModel):
     attention_matrix: List[List[float]]
     value_vectors: List[List[float]]  # [seq, d_head]
     out_vectors: List[List[float]]    # [seq, d_model]
-    out_vector_kind: str              # "result" or "reconstructed_from_z"
+    out_vector_kind: Literal["result", "reconstructed_from_z"]  # "result" or "reconstructed_from_z"
     includes_bias: bool               # whether b_O/n_heads was added to out_vectors
 
 
