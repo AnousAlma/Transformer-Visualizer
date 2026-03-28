@@ -13,6 +13,10 @@ import os
 
 router = APIRouter(prefix="/v1", tags=["LLMjudge"])  
 groq_key=os.environ.get("GROQ_API_KEY")
+if not groq_key:
+    raise RuntimeError(
+        "GROQ_API_KEY environment variable is not set; cannot initialize LLM judge model."
+    )
 
 judge_model = LiteLLMModel(model="groq/llama-3.3-70b-versatile",api_key=groq_key)
 
