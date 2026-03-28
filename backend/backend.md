@@ -319,6 +319,7 @@ response:
 ```text
 POST /v1/judge
 ```
+make sure to add your `GROQ_API_KEY` to `.env` . 
 
 request body:
 

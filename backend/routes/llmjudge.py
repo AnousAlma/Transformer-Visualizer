@@ -11,7 +11,7 @@ from deepeval.test_case import LLMTestCaseParams
 from schemas import LLMJudgeRequest, LLMJudgeResponse
 import os
 
-router = APIRouter(prefix="/v1", tags=["LLMjudge"])  
+router = APIRouter(prefix="/v1", tags=["llmjudge"])  
 groq_key=os.environ.get("GROQ_API_KEY")
 if not groq_key:
     raise RuntimeError(
@@ -25,7 +25,7 @@ async def judge_output(request: LLMJudgeRequest):
     try:
         metric = GEval(
             name="Hallucination",
-            criteria="Given an input text and a predicted next word, determine if the predicted word is factually correct and makes sense as the next word. For example, if the input is 'the capital of france is' and the output is 'paris', that is correct and should score 1.0.",
+            criteria="Given an input text and a predicted next word, determine if the predicted word could plausibly continue the input as part of a longer phrase. Common words like 'the', 'a', 'of', 'in' are almost always valid continuations. For example, 'the' after 'the largest country in' scores 1.0 because it continues as 'the world'. Only score low if the word is clearly factually wrong or grammatically impossible.",
             evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
             model=judge_model, async_mode=False
         )
