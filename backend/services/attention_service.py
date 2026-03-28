@@ -61,6 +61,7 @@ class AttentionExtractor:
         text: str,
         layer: int,
         head: int,
+        include_bias: bool = True,
     ) -> Dict:
         """Extract a single head's attention pattern, value vectors, and out vectors.
 
@@ -68,6 +69,7 @@ class AttentionExtractor:
             attention_matrix: [seq, seq]
             value_vectors: [seq, d_head]
             out_vectors: [seq, d_model]  (per-head result after W_O)
+            includes_bias: bool  (whether b_O/n_heads was added to out_vectors)
         """
 
         tokens = self.model.to_tokens(text)
@@ -109,6 +111,11 @@ class AttentionExtractor:
             raise ValueError(f"Invalid head index {head}. Model has {v.shape[1]} heads.")
         value_vectors = v[:, head, :].detach().cpu().numpy().tolist()
 
+        # b_O and n_heads are the same regardless of which hook path we take.
+        b_O = getattr(self.model.blocks[layer].attn, "b_O", None)
+        n_heads = self.model.cfg.n_heads
+        bias_applied = b_O is not None and include_bias
+
         # Prefer per-head result in d_model if available; else fall back to z in d_head.
         if hook_result in cache:
             # result shape: [batch, pos, head, d_model]
@@ -119,7 +126,10 @@ class AttentionExtractor:
                 raise ValueError(
                     f"Invalid head index {head}. Model has {result.shape[1]} heads."
                 )
-            out_vectors = result[:, head, :].detach().cpu().numpy().tolist()
+            out = result[:, head, :]
+            if bias_applied:
+                out = out + (b_O / n_heads)
+            out_vectors = out.detach().cpu().numpy().tolist()
             out_vector_kind = "result"
         elif hook_z in cache:
             # z shape: [batch, pos, head, d_head]
@@ -133,15 +143,14 @@ class AttentionExtractor:
             # out_head[pos] = z[pos, head] @ W_O[head]  (+ optional share of b_O)
             # TransformerLens stores W_O as [n_heads, d_head, d_model] for GPT-style models.
             W_O = self.model.blocks[layer].attn.W_O  # type: ignore[attr-defined]
-            b_O = getattr(self.model.blocks[layer].attn, "b_O", None)
 
             z_head = z[:, head, :]  # [pos, d_head]
             out = z_head @ W_O[head]  # [pos, d_model]
 
             # b_O is applied after summing heads; we distribute it evenly so each head's
             # "out" still sums to the layer attn_out when you sum across heads.
-            if b_O is not None:
-                out = out + (b_O / z.shape[1])
+            if bias_applied:
+                out = out + (b_O / n_heads)
 
             out_vectors = out.detach().cpu().numpy().tolist()
             out_vector_kind = "reconstructed_from_z"
@@ -156,6 +165,7 @@ class AttentionExtractor:
             "value_vectors": value_vectors,
             "out_vectors": out_vectors,
             "out_vector_kind": out_vector_kind,
+            "includes_bias": bias_applied,
         }
 
     def extract_all_heads_value_and_out(
