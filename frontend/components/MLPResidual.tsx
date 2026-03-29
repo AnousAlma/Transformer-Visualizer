@@ -189,12 +189,13 @@ function MLPFlow({
 }
 /* ─── MAIN ──────────────────────────────────────────────────── */
 export default function MLPScreen({
-  stepIndex, setStepIndex, inputText, layer = 1,
+  stepIndex, setStepIndex, inputText, layer = 1, head = 0,
 }: {
   stepIndex: number
   setStepIndex: (n: number) => void
   inputText: string
   layer?: number
+  head?: number
 }) {
   const tokens = inputText.trim().length > 0 ? inputText.split(/\s+/) : []
   const [selectedToken, setSelectedToken] = useState(0)
@@ -203,8 +204,12 @@ export default function MLPScreen({
   const [realFinalVec, setRealFinalVec] = useState<number[] | null>(null)
   const [realAttnVec, setRealAttnVec] = useState<number[] | null>(null)
   const [lookupDim, setLookupDim] = useState<number | null>(null)
+
   useEffect(() => {
     if (!tokens.length) return
+    // reset immediately so stale values don't linger while fetching
+    setRealAttnVec(null)
+    setRealFinalVec(null)
     fetch("http://localhost:8000/v1/mlp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -218,7 +223,6 @@ export default function MLPScreen({
         const out = d.mlp_outputs?.[0]
         if (out?.mlp_output) setRealFinalVec(out.mlp_output)
         if (out?.attention_residual) setRealAttnVec(out.attention_residual.slice(0, 64))
-        // animate after new data arrives so strips show fresh values
         setPhase(0)
         setTimeout(() => setPhase(1), 60)
         setTimeout(() => setPhase(2), 360)
@@ -227,11 +231,12 @@ export default function MLPScreen({
       })
       .catch(console.error)
   }, [inputText, selectedToken, layer])
+
   useEffect(() => {
-    // initial load animation before first fetch resolves
     const ts = [150, 450, 800, 1150].map((d, i) => setTimeout(() => setPhase(i + 1), d))
     return () => ts.forEach(clearTimeout)
   }, [])
+
   const attnVec  = realAttnVec ?? generateVector((tokens[selectedToken] ?? "") + "_ATTN")
   const mlpVec   = generateVector((tokens[selectedToken] ?? "") + "_MLP")
   const geluVec  = mlpVec.map(gelu)
@@ -316,13 +321,10 @@ export default function MLPScreen({
                 <span className="text-zinc-600">dim</span>
                 <span className="text-zinc-400">{activeDim}</span>
               </div>
-
               {!isHighDim ? (
                 <>
                   {[
                     { label: "Attn",  val: inspectorValues.attn,  color: "text-purple-400" },
-                    { label: "MLP",   val: inspectorValues.mlp,   color: "text-blue-400" },
-                    { label: "GELU",  val: inspectorValues.gelu,  color: "text-emerald-400" },
                     { label: "Final", val: inspectorValues.final, color: "text-violet-300" },
                   ].map(({ label, val, color }) => (
                     <div key={label} className="flex justify-between items-center">
