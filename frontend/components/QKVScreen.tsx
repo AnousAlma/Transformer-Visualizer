@@ -46,9 +46,9 @@ export default function QKVScreen({
       })
 
       const data = await res.json()
-      const filtered = data.token_embeddings.filter((te:any)=>
-        !te.token.match(/^<\|.*\|>$|^\[.*\]$/)
-      )
+      const filtered = data.token_embeddings.filter((te: any) =>
+  !te.token.match(/^<\|.*\|>$|^\[.*\]$/) && te.token.trim().length > 0
+)
 
       setTokens(filtered.map((t:any)=>t.token))
       setEmbedding(filtered[0]?.embedding || [])

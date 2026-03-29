@@ -197,7 +197,7 @@ export default function MLPScreen({
   layer?: number
   head?: number
 }) {
-  const tokens = inputText.trim().length > 0 ? inputText.split(/\s+/) : []
+  const [tokens, setTokens] = useState<string[]>([])
   const [selectedToken, setSelectedToken] = useState(0)
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   const [phase, setPhase] = useState(0)
@@ -205,9 +205,28 @@ export default function MLPScreen({
   const [realAttnVec, setRealAttnVec] = useState<number[] | null>(null)
   const [lookupDim, setLookupDim] = useState<number | null>(null)
 
+  // fetch real tokens from tokenizer
+  useEffect(() => {
+    if (!inputText.trim()) return
+    fetch("http://localhost:8000/v1/tokenize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: inputText, language: "en" }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        const filtered = d.token_embeddings.filter(
+          (te: any) => !te.token.match(/^<\|.*\|>$|^\[.*\]$/) && te.token.trim().length > 0
+        )
+        setTokens(filtered.map((te: any) => te.token))
+        setSelectedToken(0)
+      })
+      .catch(console.error)
+  }, [inputText])
+
+  // fetch MLP data
   useEffect(() => {
     if (!tokens.length) return
-    // reset immediately so stale values don't linger while fetching
     setRealAttnVec(null)
     setRealFinalVec(null)
     fetch("http://localhost:8000/v1/mlp", {
