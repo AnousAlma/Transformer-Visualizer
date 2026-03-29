@@ -29,9 +29,11 @@ export default function TokenizationScreen({ stepIndex, setStepIndex, inputText,
           body: JSON.stringify({ text: inputText, language })
         })
         const data = await res.json()
-        const cleaned = data.token_embeddings
-          .map((t: any) => t.token)
-          .filter((t: any) => typeof t === "string" && t.trim() !== "")
+      console.log("before filter:", data.token_embeddings.map((te: any) => JSON.stringify(te.token)))
+const cleaned = data.token_embeddings
+  .map((t: any) => t.token)
+  .filter((t: any) => typeof t === "string" && t.trim() !== "" && !t.match(/^<\|.*\|>$|^\[.*\]$/))
+        console.log("cleaned:", cleaned)
         setTokens(cleaned)
       } catch { setError(t("error")); setTokens([]) }
       finally { setLoading(false) }
@@ -40,16 +42,21 @@ export default function TokenizationScreen({ stepIndex, setStepIndex, inputText,
   }, [runSignal, language])
 
   useEffect(() => {
+    console.log("animation fired with tokens:", tokens)
     if (tokens.length === 0) return
     setVisibleTokens([]); setFinished(false); setLatestIndex(-1)
     let i = 0
-    const interval = setInterval(() => {
-      if (i >= tokens.length) { clearInterval(interval); setFinished(true); return }
-      setVisibleTokens(prev => { const next = [...prev, tokens[i]]; setLatestIndex(next.length - 1); return next })
-      i++
-    }, 400)
+const interval = setInterval(() => {
+  if (i >= tokens.length) { clearInterval(interval); setFinished(true); return }
+  const currentIndex = i  // ← capture before increment
+  const currentToken = tokens[currentIndex]  // ← read token immediately
+  i++
+  setVisibleTokens(prev => [...prev, currentToken])
+  setLatestIndex(currentIndex)
+}, 400)
+    console.log("visibleTokens at render:", visibleTokens)
     return () => clearInterval(interval)
-  }, [tokens, runSignal])
+  }, [tokens])
 
   return (
     <div className="grid grid-cols-[2fr_1fr] gap-10">
@@ -60,7 +67,7 @@ export default function TokenizationScreen({ stepIndex, setStepIndex, inputText,
         <FlowArrow/>
 
         <div className="text-zinc-400 text-sm text-center">
-          TOKENS ({Math.max(visibleTokens.length - 1, 0)})
+          TOKENS ({visibleTokens.length})
         </div>
 
         {loading && <div className="text-zinc-500 text-sm">{t("loading")}</div>}
