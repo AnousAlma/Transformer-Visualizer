@@ -13,18 +13,11 @@ from routes.qkv import router as qkv_router
 from routes.mlp import router as mlp_router
 from routes.modelinfo import router as model_info_router
 
-# Lazy loading for serverless environments
-def lazy_load_model(language: str = "en"):
-    """Lazily load models on first request to avoid cold start issues"""
-    if not model_manager.is_loaded() or model_manager.curr_language != language:
-        model_manager.load_model(language=language, device=settings.device)
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # For Vercel/serverless, we'll load models on-demand rather than at startup
-    # to avoid timeouts during cold starts
-    if os.getenv("VERCEL") != "1":
-        # Only preload models in local development
+    # Load models on startup for better performance
+    # In production, models will be loaded on-demand to handle startup time
+    if settings.environment == "development":
         model_manager.load_model(language="en", device=settings.device)
         model_manager.load_model(language="fr", device=settings.device)
         model_manager.load_model(language="zh", device=settings.device)
@@ -64,8 +57,7 @@ async def health_check():
         "current_language": model_manager.curr_language,
         "current_model": current_model,
         "available_languages": list(LANGUAGE_MODELS.keys()),
-        "environment": settings.environment,
-        "vercel_deployment": os.getenv("VERCEL", "0") == "1"
+        "environment": settings.environment
     }
     
 @app.get("/")

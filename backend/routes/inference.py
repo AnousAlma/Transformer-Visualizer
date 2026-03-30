@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException
 import torch
 from typing import List
-import os
 
 from models.model_loader import model_manager
 from config import settings
@@ -13,13 +12,13 @@ from schemas import (
 router = APIRouter(prefix="/v1", tags=["inference"])
 
 def ensure_model_loaded(language: str = "en"):
-    """Ensure model is loaded, load it if not (for serverless environments)"""
+    """Ensure model is loaded, load it if not"""
     if not model_manager.is_loaded(language):
         model_manager.load_model(language=language, device=settings.device)
 
 @router.post("/predict", response_model=InferenceResponse)
 async def predict_next_token(request: InferenceRequest):
-    # Ensure model is loaded (lazy loading for serverless)
+    # Ensure model is loaded
     ensure_model_loaded(request.language)
     
     if not model_manager.is_loaded(request.language):
@@ -110,7 +109,7 @@ async def generate_text(request: InferenceRequest):
 
 @router.post("/tokenize", response_model=TokenizationResponse)
 async def tokenize_text(request: TokenizationRequest):
-    # Ensure model is loaded (lazy loading for serverless)
+    # Ensure model is loaded
     ensure_model_loaded(request.language)
     
     if not model_manager.is_loaded(request.language):
