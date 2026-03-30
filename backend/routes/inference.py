@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException
 import torch
-import torch.nn.functional as F
 from typing import List, Optional
 
 from models.model_loader import model_manager
