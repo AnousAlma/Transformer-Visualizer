@@ -10,12 +10,14 @@ from routes.ablation import router as ablation_router
 from routes.llmjudge import router as llmjudge_router
 from routes.qkv import router as qkv_router
 from routes.mlp import router as mlp_router
+from routes.modelinfo import router as model_info_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # load model on startup
     model_manager.load_model(language="en", device=settings.device)
     model_manager.load_model(language="fr", device=settings.device)
+    model_manager.load_model(language="zh", device=settings.device)
     yield
     # cleanup model on shutdown
     model_manager.models = {}
@@ -38,6 +40,7 @@ app.include_router(ablation_router)
 app.include_router(llmjudge_router)
 app.include_router(qkv_router)
 app.include_router(mlp_router)
+app.include_router(model_info_router)
 
 @app.get("/health")
 async def health_check():
