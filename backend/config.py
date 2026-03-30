@@ -5,10 +5,8 @@ import os
 class Settings(BaseSettings):
     # application configuration
     app_name: str = "Transformer Visualizer API"
-    
-    # server configuration
     host: str = "0.0.0.0"
-    port: int = int(os.getenv("PORT", 8000))
+    port: int = 8000
     
     # model configuration
     default_language: str = "en"
@@ -17,8 +15,13 @@ class Settings(BaseSettings):
     # API keys
     groq_api_key: Optional[str] = None
     
+    # Deployment environment
+    environment: str = "development"
+    
     class Config:
         env_file = ".env"
+        # Allow environment variables to override
+        case_sensitive = False
 
 # global settings instance
 settings = Settings()

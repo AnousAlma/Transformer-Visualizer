@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException
 import torch
 from typing import List
+import os
 
 from models.model_loader import model_manager
+from config import settings
 from schemas import (
     InferenceRequest, InferenceResponse, TokenProbability,
     TokenizationRequest, TokenizationResponse, TokenEmbedding
@@ -10,11 +12,18 @@ from schemas import (
 
 router = APIRouter(prefix="/v1", tags=["inference"])
 
+def ensure_model_loaded(language: str = "en"):
+    """Ensure model is loaded, load it if not (for serverless environments)"""
+    if not model_manager.is_loaded(language):
+        model_manager.load_model(language=language, device=settings.device)
+
 @router.post("/predict", response_model=InferenceResponse)
 async def predict_next_token(request: InferenceRequest):
-    # check if model is loaded before processing
+    # Ensure model is loaded (lazy loading for serverless)
+    ensure_model_loaded(request.language)
+    
     if not model_manager.is_loaded(request.language):
-        raise HTTPException(status_code=503, detail="Model not loaded")
+        raise HTTPException(status_code=503, detail=f"Model for language {request.language} could not be loaded")
     
     model = model_manager.get_model(request.language)
     
@@ -101,9 +110,11 @@ async def generate_text(request: InferenceRequest):
 
 @router.post("/tokenize", response_model=TokenizationResponse)
 async def tokenize_text(request: TokenizationRequest):
-    # check if model is loaded before processing
+    # Ensure model is loaded (lazy loading for serverless)
+    ensure_model_loaded(request.language)
+    
     if not model_manager.is_loaded(request.language):
-        raise HTTPException(status_code=503, detail="Model not loaded")
+        raise HTTPException(status_code=503, detail=f"Model for language {request.language} could not be loaded")
     
     model = model_manager.get_model(request.language)
     

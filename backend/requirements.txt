@@ -1,8 +1,8 @@
-fastapi
-uvicorn[standard]
-transformer-lens
-torch
-pydantic-settings
-python-dotenv
-deepeval
-litellm
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+transformer-lens>=1.14.0
+torch>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+deepeval>=0.21.0
+litellm>=1.40.0

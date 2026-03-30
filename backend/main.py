@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import os
 
 from config import settings
 from models.model_loader import model_manager, LANGUAGE_MODELS
@@ -12,12 +13,21 @@ from routes.qkv import router as qkv_router
 from routes.mlp import router as mlp_router
 from routes.modelinfo import router as model_info_router
 
+# Lazy loading for serverless environments
+def lazy_load_model(language: str = "en"):
+    """Lazily load models on first request to avoid cold start issues"""
+    if not model_manager.is_loaded() or model_manager.curr_language != language:
+        model_manager.load_model(language=language, device=settings.device)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # load model on startup
-    model_manager.load_model(language="en", device=settings.device)
-    model_manager.load_model(language="fr", device=settings.device)
-    model_manager.load_model(language="zh", device=settings.device)
+    # For Vercel/serverless, we'll load models on-demand rather than at startup
+    # to avoid timeouts during cold starts
+    if os.getenv("VERCEL") != "1":
+        # Only preload models in local development
+        model_manager.load_model(language="en", device=settings.device)
+        model_manager.load_model(language="fr", device=settings.device)
+        model_manager.load_model(language="zh", device=settings.device)
     yield
     # cleanup model on shutdown
     model_manager.models = {}
@@ -53,7 +63,9 @@ async def health_check():
         "model_loaded": model_manager.is_loaded(),
         "current_language": model_manager.curr_language,
         "current_model": current_model,
-        "available_languages": list(LANGUAGE_MODELS.keys())
+        "available_languages": list(LANGUAGE_MODELS.keys()),
+        "environment": settings.environment,
+        "vercel_deployment": os.getenv("VERCEL", "0") == "1"
     }
     
 @app.get("/")
@@ -62,13 +74,3 @@ async def home():
         "app": settings.app_name,
         "version": "v1"
     }
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=False,  # Set to False for production
-        log_level="info"
-    )
