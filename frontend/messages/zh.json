@@ -143,6 +143,9 @@
     "flowResidual": "加回注意力输出"
   },
   "output": {
+    "highestLogitToken": "最高logit的token",
+    "logit": "logit",
+    "prob": "概率",
     "instruction": "输出概率 · 线性投影 + Softmax",
     "step1Label": "最终隐藏状态 · {dModel} 维",
     "step1Desc": "该词元在所有注意力和 MLP 层之后的完整表示。",

@@ -143,6 +143,9 @@
     "flowResidual": "add attention output back"
   },
   "output": {
+    "highestLogitToken": "Highest logit token",
+    "logit": "logit",
+    "prob": "prob",
     "instruction": "Output Probabilities · Linear Projection + Softmax",
     "step1Label": "Final hidden state · {dModel} dims",
     "step1Desc": "The full representation of this token after all attention and MLP layers.",

@@ -143,6 +143,9 @@
     "flowResidual": "rajouter la sortie d'attention"
   },
   "output": {
+    "highestLogitToken": "Jeton avec le logit le plus élevé",
+    "logit": "logit",
+    "prob": "probabilité",
     "instruction": "Probabilités de Sortie · Projection Linéaire + Softmax",
     "step1Label": "État caché final · {dModel} dims",
     "step1Desc": "La représentation complète de ce token après toutes les couches d'attention et MLP.",
