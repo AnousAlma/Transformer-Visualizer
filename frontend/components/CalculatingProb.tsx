@@ -10,6 +10,31 @@ function seedNum(str: string) {
   return s
 }
 
+interface TokenProb {
+  token: string
+  probability: number
+  token_id: number
+}
+
+interface DerivedValues {
+  logits: { token: string; token_id: number; logit: number }[]
+  probs:  { token: string; token_id: number; prob: number }[]
+}
+
+function deriveFromProbs(raw: TokenProb[]): DerivedValues {
+  const logits = raw.map(p => ({
+    token:    p.token,
+    token_id: p.token_id,
+    logit:    Math.log(p.probability),
+  }))
+  const probs = raw.map(p => ({
+    token:    p.token,
+    token_id: p.token_id,
+    prob:     p.probability,
+  }))
+  return { logits, probs }
+}
+
 function FlowCanvas({ token, dModel, vocabSize }: { token: string; dModel: number; vocabSize: number }) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const s = seedNum(token)
@@ -19,7 +44,7 @@ function FlowCanvas({ token, dModel, vocabSize }: { token: string; dModel: numbe
     return { alpha: 0.12 + v * 0.85, color: colors[i % colors.length] }
   })
   const linDims = Array.from({ length: 18 }, (_, i) => ({ alpha: 0.08 + Math.abs(Math.sin(s * (i + 3) * 1.3)) * 0.55, delay: i * 60 }))
-  const smDims = Array.from({ length: 10 }, (_, i) => ({ alpha: 0.1 + Math.abs(Math.sin(s * (i + 7) * 0.9)) * 0.7, delay: i * 80 }))
+  const smDims  = Array.from({ length: 10 }, (_, i) => ({ alpha: 0.1  + Math.abs(Math.sin(s * (i + 7) * 0.9)) * 0.7,  delay: i * 80 }))
 
   return (
     <div ref={canvasRef} className="w-full">
@@ -60,6 +85,71 @@ function FlowCanvas({ token, dModel, vocabSize }: { token: string; dModel: numbe
   )
 }
 
+function ValueRow({
+  token, value, displayValue, barColor, maxAbs, rank,
+}: {
+  token: string; value: number; displayValue: string; barColor: string; maxAbs: number; rank: number
+}) {
+  const pct = Math.min(Math.abs(value) / maxAbs, 1) * 100
+  return (
+    <div className="flex items-center gap-3">
+      <span className="font-mono text-[11px] text-zinc-300 shrink-0 text-right truncate" style={{ width: 88 }}>
+        {JSON.stringify(token)}
+      </span>
+      <div className="flex-1 h-[5px] bg-[#1a1a20] rounded-full overflow-hidden">
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: barColor }}/>
+      </div>
+      <span className="font-mono text-[10px] text-zinc-500 shrink-0 tabular-nums" style={{ width: 56, textAlign: "right" }}>
+        {displayValue}
+      </span>
+    </div>
+  )
+}
+
+function LogitTable({ derived, loading }: { derived: DerivedValues | null; loading: boolean }) {
+  if (loading) return <Skeleton/>
+  if (!derived) return null
+  const maxAbs = Math.max(...derived.logits.map(l => Math.abs(l.logit)), 0.001)
+  return (
+    <div className="flex flex-col gap-1.5">
+      {derived.logits.map((l, i) => (
+        <ValueRow key={l.token_id} token={l.token} value={l.logit}
+          displayValue={l.logit.toFixed(3)} barColor="rgba(99,102,241,0.7)" maxAbs={maxAbs} rank={i}/>
+      ))}
+    </div>
+  )
+}
+
+function ProbTable({ derived, loading }: { derived: DerivedValues | null; loading: boolean }) {
+  if (loading) return <Skeleton/>
+  if (!derived) return null
+  const maxP = derived.probs[0]?.prob ?? 0.001
+  return (
+    <div className="flex flex-col gap-1.5">
+      {derived.probs.map((p, i) => (
+        <ValueRow key={p.token_id} token={p.token} value={p.prob}
+          displayValue={`${(p.prob * 100).toFixed(2)}%`} barColor="rgba(6,182,212,0.7)" maxAbs={maxP} rank={i}/>
+      ))}
+    </div>
+  )
+}
+
+function Skeleton() {
+  return (
+    <div className="flex flex-col gap-2">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 animate-pulse">
+          <div className="w-20 h-3.5 bg-zinc-800 rounded"/>
+          <div className="flex-1 h-3.5 bg-zinc-800 rounded"/>
+          <div className="w-12 h-3.5 bg-zinc-800 rounded"/>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+type ActiveTable = "logits" | "probs"
+
 export default function ProbabilityScreen({ stepIndex, setStepIndex, inputText, nHeads, dModel, vocabSize }: {
   stepIndex: number; setStepIndex: (n: number) => void; inputText: string; nHeads: number; dModel: number; vocabSize: number
 }) {
@@ -67,8 +157,57 @@ export default function ProbabilityScreen({ stepIndex, setStepIndex, inputText, 
   const locale = useLocale()
   const language = localeToLanguage[locale] ?? "en"
 
-  const tokens = inputText.trim().length > 0 ? inputText.split(/\s+/) : ["The"]
+  const [tokens,         setTokens]         = useState<string[]>([])
   const [selectedToken, setSelectedToken] = useState(0)
+  const [finished,      setFinished]      = useState(false)
+  const [derived,       setDerived]       = useState<DerivedValues | null>(null)
+  const [loading,       setLoading]       = useState(false)
+  const [activeTable,   setActiveTable]   = useState<ActiveTable>("logits")
+
+  useEffect(() => {
+    if (!inputText.trim()) return
+    const run = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/v1/tokenize", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: inputText, language }),
+        })
+        const data = await res.json()
+        const filtered = data.token_embeddings.filter((te: any) => !te.token.match(/^<\|.*\|>$|^\[.*\]$/))
+        const toks = filtered.map((te: any) => te.token)
+        setTokens(toks.length > 0 ? toks : inputText.split(/\s+/))
+        setSelectedToken(0)
+      } catch {
+        setTokens(inputText.split(/\s+/))
+        setSelectedToken(0)
+      }
+    }
+    run()
+  }, [inputText, language])
+
+  useEffect(() => {
+    if (!tokens.length) return
+    const prefix = tokens.slice(0, selectedToken + 1).join("")
+    setLoading(true)
+    setDerived(null)
+    fetch("http://localhost:8000/v1/predict", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: prefix, max_tokens: 1, temperature: 1, top_k: 20, language }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        const raw: TokenProb[] = d.next_token_probabilities ?? []
+        setDerived(deriveFromProbs(raw))
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [tokens, selectedToken, language])
+
+  useEffect(() => {
+    setFinished(false)
+    const t = setTimeout(() => setFinished(true), 1200)
+    return () => clearTimeout(t)
+  }, [selectedToken])
 
   const steps = [
     { num: "1", color: "rgba(168,85,247,0.4)", textColor: "text-purple-400", labelKey: "step1Label" as const, descKey: "step1Desc" as const },
@@ -85,11 +224,8 @@ export default function ProbabilityScreen({ stepIndex, setStepIndex, inputText, 
 
   return (
     <div className="grid grid-cols-[2fr_1fr] gap-10">
-
       <div className="flex flex-col gap-8">
-        <div className="text-[11px] tracking-[0.22em] text-zinc-500 uppercase">
-          {t("instruction")}
-        </div>
+        <div className="text-[11px] tracking-[0.22em] text-zinc-500 uppercase">{t("instruction")}</div>
 
         <div className="flex gap-3 flex-wrap">
           {tokens.map((tok, i) => (
@@ -98,27 +234,57 @@ export default function ProbabilityScreen({ stepIndex, setStepIndex, inputText, 
                 i === selectedToken
                   ? "bg-purple-600/90 border-purple-400/60 text-white shadow-[0_0_14px_rgba(168,85,247,0.4)]"
                   : "bg-[#111114] border-[#2a2a2e] text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
-              }`}>
-              {tok}
-            </button>
+              }`}>{tok}</button>
           ))}
         </div>
 
-        <FlowCanvas token={tokens[selectedToken]} dModel={dModel} vocabSize={vocabSize} />
+        <FlowCanvas token={tokens[selectedToken] ?? ""} dModel={dModel} vocabSize={vocabSize}/>
 
         <div className="flex flex-col gap-5 mt-2">
           {steps.map(({ num, color, textColor, labelKey, descKey }) => (
             <div key={num} className="flex items-start gap-4">
               <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] shrink-0 mt-0.5"
-                style={{ border: `1px solid ${color}`, color: color.replace("0.4", "0.9") }}>
-                {num}
-              </div>
+                style={{ border: `1px solid ${color}`, color: color.replace("0.4","0.9") }}>{num}</div>
               <div className="flex flex-col gap-1">
-                <div className={`text-[10px] tracking-[0.16em] uppercase ${textColor}`}>{t(labelKey, {dModel, vocabSize})}</div>
-                <div className="text-[11px] text-zinc-600 leading-relaxed max-w-md">{t(descKey, {vocabSize})}</div>
+                <div className={`text-[10px] tracking-[0.16em] uppercase ${textColor}`}>{t(labelKey, { dModel, vocabSize })}</div>
+                <div className="text-[11px] text-zinc-600 leading-relaxed max-w-md">{t(descKey, { vocabSize })}</div>
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="flex flex-col gap-4 border border-[#1e1e24] rounded-2xl p-5 overflow-visible">
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] tracking-[0.18em] text-zinc-500 uppercase">
+              {activeTable === "logits" ? t("step2Label", { dModel, vocabSize }) : t("step3Label", { dModel, vocabSize })}
+            </div>
+            <div className="flex gap-1 bg-[#111114] rounded-lg p-1">
+              {(["logits","probs"] as ActiveTable[]).map(tab => (
+                <button key={tab} onClick={() => setActiveTable(tab)}
+                  className={`px-3 py-1 rounded-md text-[10px] font-mono transition-all duration-150 ${
+                    activeTable === tab
+                      ? tab === "logits"
+                        ? "bg-indigo-600/80 text-white"
+                        : "bg-cyan-600/80 text-white"
+                      : "text-zinc-500 hover:text-zinc-300"
+                  }`}>
+                  {tab === "logits" ? "logits" : "softmax"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="text-[10px] text-zinc-600 leading-relaxed">
+            {activeTable === "logits"
+              ? t("step2Desc", { vocabSize })
+              : t("step3Desc", { vocabSize })
+            }
+          </div>
+
+          {activeTable === "logits"
+            ? <LogitTable derived={derived} loading={loading}/>
+            : <ProbTable  derived={derived} loading={loading}/>
+          }
         </div>
       </div>
 
@@ -131,8 +297,8 @@ export default function ProbabilityScreen({ stepIndex, setStepIndex, inputText, 
         <div className="flex flex-col gap-3 text-xs">
           {bullets.map(({ color, key }, i) => (
             <div key={i} className="flex items-start gap-2.5">
-              <div className={`w-4 h-4 rounded-full ${color} shrink-0 mt-0.5 opacity-80`} />
-              <span className="text-zinc-400 leading-relaxed">{t(key, {dModel, vocabSize})}</span>
+              <div className={`w-4 h-4 rounded-full ${color} shrink-0 mt-0.5 opacity-80`}/>
+              <span className="text-zinc-400 leading-relaxed">{t(key, { dModel, vocabSize })}</span>
             </div>
           ))}
         </div>
@@ -142,6 +308,17 @@ export default function ProbabilityScreen({ stepIndex, setStepIndex, inputText, 
           <div className="text-[11px] text-zinc-500 leading-relaxed">{t("whySoftmaxDesc")}</div>
         </div>
 
+        {derived && derived.probs.length > 0 && (
+          <div className="border border-[#1e1e24] rounded-xl p-3 flex flex-col gap-2">
+            <div className="text-[10px] tracking-widest text-zinc-600 uppercase">{t("highestLogitToken")}</div>
+            <div className="font-mono text-lg text-zinc-200 font-medium">{JSON.stringify(derived.probs[0].token)}</div>
+            <div className="flex gap-4 text-[11px] font-mono">
+              <span className="text-zinc-600">{t("logit")}<span className="text-indigo-400">{derived.logits[0]?.logit.toFixed(3)}</span></span>
+              <span className="text-zinc-600">{t("prob")}<span className="text-cyan-400">{(derived.probs[0].prob * 100).toFixed(2)}%</span></span>
+            </div>
+          </div>
+        )}
+
         <div className="border-t border-[#1e1e24] pt-4 flex flex-col gap-1">
           <div className="text-[10px] tracking-widest text-zinc-600 uppercase">{t("vocabSize")}</div>
           <div className="font-mono text-2xl text-zinc-300 font-semibold">{vocabSize}</div>
@@ -150,12 +327,13 @@ export default function ProbabilityScreen({ stepIndex, setStepIndex, inputText, 
 
         <div className="mt-auto flex justify-end">
           <button onClick={() => setStepIndex(stepIndex + 1)}
-            className="px-4 py-2 rounded-lg text-xs border border-[#2a2a2e] text-zinc-400 hover:bg-[#1a1a20] hover:text-zinc-200 transition">
+            className={`px-4 py-2 rounded-lg text-xs border border-[#2a2a2e] transition ${
+              finished ? "bg-purple-600 text-white animate-pulse" : "text-zinc-400 hover:bg-[#1a1a20]"
+            }`}>
             {t("next")}
           </button>
         </div>
       </div>
-
     </div>
   )
 }
