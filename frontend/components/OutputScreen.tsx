@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useTranslations, useLocale } from "next-intl"
+import { apiRequest } from "@/lib/api"
 
 const localeToLanguage: Record<string, string> = { en: "en", fr: "fr", zh: "zh" }
 
@@ -32,9 +33,8 @@ export default function ProbabilitiesScreen({ inputText }: { inputText: string }
     setJudgeError(null)
     setJudgeResult(null)
     try {
-      const res = await fetch("http://localhost:8000/v1/judge", {
+      const res = await apiRequest("/v1/judge", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input_text: inputText, generated_text: activeToken.trim() })
       })
       if (!res.ok) throw new Error(`Judge failed: ${res.status}`)
@@ -50,8 +50,8 @@ export default function ProbabilitiesScreen({ inputText }: { inputText: string }
   async function fetchPredictions(text: string) {
     setLoading(true); setError(null)
     try {
-      const res = await fetch("http://localhost:8000/v1/predict", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await apiRequest("/v1/predict", {
+        method: "POST",
         body: JSON.stringify({ text, temperature, top_k: topK, language })
       })
       if (!res.ok) throw new Error(`Predict failed: ${res.status}`)

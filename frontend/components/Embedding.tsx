@@ -3,6 +3,7 @@
 import FlowArrow from "./FlowArrow"
 import { useState, useEffect } from "react"
 import { useTranslations, useLocale } from "next-intl"
+import { apiRequest } from "@/lib/api"
 
 const localeToLanguage: Record<string, string> = { en: "en", fr: "fr", zh: "zh" }
 
@@ -28,8 +29,8 @@ export default function Embedding({ stepIndex, setStepIndex, inputText, dModel }
     const fetch_ = async () => {
       setLoading(true); setError(null)
       try {
-        const response = await fetch("http://localhost:8000/v1/tokenize", {
-          method: "POST", headers: { "Content-Type": "application/json" },
+        const response = await apiRequest("/v1/tokenize", {
+          method: "POST",
           body: JSON.stringify({ text: inputText, language })
         })
         const data = await response.json()

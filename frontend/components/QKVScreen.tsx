@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useTranslations, useLocale } from "next-intl"
+import { apiRequest } from "@/lib/api"
 
 const localeToLanguage: Record<string, string> = { en: "en", fr: "fr", zh: "zh" }
 
@@ -29,8 +30,8 @@ export default function QKVScreen({ stepIndex, setStepIndex, inputText, layer, s
 
   useEffect(() => {
     if (!inputText.trim()) return
-    fetch("http://localhost:8000/v1/tokenize", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+    apiRequest("/v1/tokenize", {
+      method: "POST",
       body: JSON.stringify({ text: inputText, language })
     }).then(r => r.json()).then(data => {
       const filtered = data.token_embeddings.filter((te: any) => !te.token.match(/^<\|.*\|>$|^\[.*\]$/))
@@ -43,8 +44,8 @@ export default function QKVScreen({ stepIndex, setStepIndex, inputText, layer, s
   const fetchQKV = (isLayer: boolean) => {
     if (!tokens.length) return
     isLayerSwitch.current = isLayer; setLoadingQKV(true)
-    fetch("http://localhost:8000/v1/qkv", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+    apiRequest("/v1/qkv", {
+      method: "POST",
       body: JSON.stringify({ text: inputText, layer: layer - 1, head: null, token_positions: [selectedToken], language })
     }).then(r => r.json()).then(data => {
       const vec = data.qkv_vectors?.[0]

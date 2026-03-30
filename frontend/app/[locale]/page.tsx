@@ -12,6 +12,7 @@ import MLPScreen from "@/components/MLPResidual"
 import ProbabilitiesScreen from "@/components/OutputScreen"
 import { useRouter, usePathname } from "@/i18n/navigation"
 import { useLocale } from "next-intl"
+import { getApiUrl } from "@/lib/api"
 
 import CalculatingProbScreen from "@/components/CalculatingProb"
 
@@ -69,7 +70,7 @@ export default function Home() {
 
   // Fetch model info whenever locale changes
   useEffect(() => {
-    fetch(`http://localhost:8000/v1/model-info?language=${backendLang}`)
+    fetch(getApiUrl(`/v1/model-info?language=${backendLang}`))
       .then(r => r.json())
       .then(d => {
         setNLayers(d.n_layers)

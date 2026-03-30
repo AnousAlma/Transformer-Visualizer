@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useTranslations, useLocale } from "next-intl"
+import { apiRequest } from "@/lib/api"
 
 const localeToLanguage: Record<string, string> = { en: "en", fr: "fr", zh: "zh" }
 
@@ -144,9 +145,8 @@ export default function MLPScreen({ stepIndex, setStepIndex, inputText, layer = 
     if (!inputText.trim()) return
     const run = async () => {
       try {
-        const res = await fetch("http://localhost:8000/v1/tokenize", {
+        const res = await apiRequest("/v1/tokenize", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: inputText, language }),
         })
         const data = await res.json()
@@ -167,8 +167,8 @@ export default function MLPScreen({ stepIndex, setStepIndex, inputText, layer = 
   useEffect(() => {
     if (!tokens.length) return
     setRealAttnVec(null); setRealFinalVec(null)
-    fetch("http://localhost:8000/v1/mlp", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+    apiRequest("/v1/mlp", {
+      method: "POST",
       body: JSON.stringify({ text: inputText, layer: layer - 1, token_positions: [selectedToken], language }),
     }).then(r => r.json()).then(d => {
       const out = d.mlp_outputs?.[0]

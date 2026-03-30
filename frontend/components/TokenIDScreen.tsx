@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import FlowArrow from "./FlowArrow"
+import { apiRequest } from "@/lib/api"
 
 const localeToLanguage: Record<string, string> = { en: "en", fr: "fr", zh: "zh" }
 
@@ -25,8 +26,8 @@ export default function TokenIDScreen({ stepIndex, setStepIndex, inputText, dMod
     const tokenize = async () => {
       setLoading(true); setError(null)
       try {
-        const res = await fetch("http://localhost:8000/v1/tokenize", {
-          method: "POST", headers: { "Content-Type": "application/json" },
+        const res = await apiRequest("/v1/tokenize", {
+          method: "POST",
           body: JSON.stringify({ text: inputText, language })
         })
         const data = await res.json()
