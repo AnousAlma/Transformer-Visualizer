@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useTranslations, useLocale } from "next-intl"
+import { API_URLS } from "../lib/api-config"
 
 const localeToLanguage: Record<string, string> = { en: "en", fr: "fr", zh: "zh" }
 
@@ -32,7 +33,7 @@ export default function ProbabilitiesScreen({ inputText }: { inputText: string }
     setJudgeError(null)
     setJudgeResult(null)
     try {
-      const res = await fetch("http://localhost:8000/v1/judge", {
+      const res = await fetch(API_URLS.JUDGE, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input_text: inputText, generated_text: activeToken.trim() })
@@ -50,7 +51,7 @@ export default function ProbabilitiesScreen({ inputText }: { inputText: string }
   async function fetchPredictions(text: string) {
     setLoading(true); setError(null)
     try {
-      const res = await fetch("http://localhost:8000/v1/predict", {
+      const res = await fetch(API_URLS.PREDICT, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, temperature, top_k: topK, language })
       })

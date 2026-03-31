@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useTranslations, useLocale } from "next-intl"
+import { API_URLS } from "../lib/api-config"
 
 const localeToLanguage: Record<string, string> = { en: "en", fr: "fr", zh: "zh" }
 
@@ -29,7 +30,7 @@ export default function QKVScreen({ stepIndex, setStepIndex, inputText, layer, s
 
   useEffect(() => {
     if (!inputText.trim()) return
-    fetch("http://localhost:8000/v1/tokenize", {
+    fetch(API_URLS.TOKENIZE, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: inputText, language })
     }).then(r => r.json()).then(data => {
@@ -43,7 +44,7 @@ export default function QKVScreen({ stepIndex, setStepIndex, inputText, layer, s
   const fetchQKV = (isLayer: boolean) => {
     if (!tokens.length) return
     isLayerSwitch.current = isLayer; setLoadingQKV(true)
-    fetch("http://localhost:8000/v1/qkv", {
+    fetch(API_URLS.QKV, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: inputText, layer: layer - 1, head: null, token_positions: [selectedToken], language })
     }).then(r => r.json()).then(data => {
