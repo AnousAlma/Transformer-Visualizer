@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
 import { useTranslations, useLocale } from "next-intl"
+import { API_URLS } from "../lib/api-config"
 
 const localeToLanguage: Record<string, string> = { en: "en", fr: "fr", zh: "zh" }
 
@@ -168,7 +169,7 @@ export default function ProbabilityScreen({ stepIndex, setStepIndex, inputText, 
     if (!inputText.trim()) return
     const run = async () => {
       try {
-        const res = await fetch("http://localhost:8000/v1/tokenize", {
+        const res = await fetch(API_URLS.TOKENIZE, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: inputText, language }),
         })
@@ -190,7 +191,7 @@ export default function ProbabilityScreen({ stepIndex, setStepIndex, inputText, 
     const prefix = tokens.slice(0, selectedToken + 1).join("")
     setLoading(true)
     setDerived(null)
-    fetch("http://localhost:8000/v1/predict", {
+    fetch(API_URLS.PREDICT, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: prefix, max_tokens: 1, temperature: 1, top_k: 20, language }),
     })

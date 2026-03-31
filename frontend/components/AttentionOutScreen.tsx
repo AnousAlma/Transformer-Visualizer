@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useTranslations, useLocale } from "next-intl"
-
+import { API_URLS } from "../lib/api-config"
 const localeToLanguage: Record<string, string> = {
   en: "en",
   fr: "fr",
@@ -280,7 +280,7 @@ export default function AttentionOutScreen({ stepIndex, setStepIndex, inputText,
   const introShownRef = useRef(false)
 
   const fetchHeadOut = (selToken: number) => {
-    fetch("http://localhost:8000/v1/attention/head-out", {
+    fetch(API_URLS.ATTENTION_HEAD_OUT, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: inputText, layer: layer - 1, head, include_bias: true, include_attention_matrix: false, language }),
     }).then(r => r.json()).then(data => {

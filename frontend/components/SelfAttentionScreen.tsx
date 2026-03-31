@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useTranslations, useLocale } from "next-intl"
+import { API_URLS } from "../lib/api-config"
 import FlowArrow from "./FlowArrow"
 
 const localeToLanguage: Record<string, string> = { en: "en", fr: "fr", zh: "zh" }
@@ -38,7 +39,7 @@ export default function SelfAttentionScreen({
     setError(null)
     setFinished(false)
     try {
-      const res = await fetch("http://localhost:8000/v1/attention", {
+      const res = await fetch(API_URLS.ATTENTION, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: inputText, layer: layer - 1, head, language })
