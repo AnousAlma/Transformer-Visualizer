@@ -291,6 +291,7 @@ class EntropyRequest(BaseModel):
     # generation parameters
     max_tokens: int = 50
     temperature: float = 1.0
+    language: str = "en"
       
 class EntropyResponse(BaseModel):
     # input and output text
