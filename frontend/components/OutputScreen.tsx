@@ -35,7 +35,7 @@ export default function ProbabilitiesScreen({ inputText }: { inputText: string }
       const res = await fetch("http://localhost:8000/v1/judge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input_text: inputText, generated_text: activeToken.trim() })
+        body: JSON.stringify({ input_text: inputText.trim(), generated_text: activeToken.trim() })
       })
       if (!res.ok) throw new Error(`Judge failed: ${res.status}`)
       const data = await res.json()
@@ -48,11 +48,12 @@ export default function ProbabilitiesScreen({ inputText }: { inputText: string }
   }
 
   async function fetchPredictions(text: string) {
+    const trimmed = text.trim()
     setLoading(true); setError(null)
     try {
       const res = await fetch("http://localhost:8000/v1/predict", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, temperature, top_k: topK, language })
+        body: JSON.stringify({ text: trimmed, temperature, top_k: topK, language })
       })
       if (!res.ok) throw new Error(`Predict failed: ${res.status}`)
       const data = await res.json()
@@ -64,7 +65,7 @@ export default function ProbabilitiesScreen({ inputText }: { inputText: string }
   }
 
   const displaySentence = inputText.trim()
-  const activeToken = selectedToken ?? predictions[0]?.token ?? ""
+  const activeToken = (selectedToken ?? predictions[0]?.token ?? "").replace(/Ġ+/g, " ")
   
   return (
     <div className="flex w-full gap-10">
@@ -73,7 +74,7 @@ export default function ProbabilitiesScreen({ inputText }: { inputText: string }
 
         <div className="text-lg text-zinc-300 mb-10 text-center">
           {displaySentence}{" "}
-          {activeToken && <span className="text-purple-400 font-medium">{activeToken.trim()}</span>}
+          {activeToken && <span className="text-purple-400 font-medium">{activeToken}</span>}
         </div>
     
         {error && <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 mb-6">{error}</div>}
@@ -86,7 +87,7 @@ export default function ProbabilitiesScreen({ inputText }: { inputText: string }
                 const isActive = (selectedToken ?? predictions[0].token) === item.token
                 return (
                   <button key={i} onClick={() => setSelectedToken(item.token)} className="flex items-center gap-3 w-full text-left group">
-                    <div className={`w-28 text-sm transition ${isActive ? "text-purple-400 font-medium" : "text-zinc-400 group-hover:text-zinc-200"}`}>{item.token.trim()}</div>
+                    <div className={`w-28 text-sm transition ${isActive ? "text-purple-400 font-medium" : "text-zinc-400 group-hover:text-zinc-200"}`}>{item.token.replace(/Ġ+/g, " ")}</div>
                     <div className="flex-1 h-2 bg-[#1c1c22] rounded-full overflow-hidden">
                       <div className={`h-full rounded-full transition-all duration-500 ${isActive ? "bg-purple-500" : "bg-zinc-600 group-hover:bg-zinc-500"}`} style={{ width: `${item.probability * 100}%` }}/>
                     </div>
@@ -103,7 +104,7 @@ export default function ProbabilitiesScreen({ inputText }: { inputText: string }
                 return (
                   <button key={i} onClick={() => setSelectedToken(item.token)}
                     className={`text-sm px-4 py-2 rounded-lg border text-left transition ${isActive ? "border-purple-500 bg-purple-500/10 text-purple-300" : "border-[#2a2a2e] text-zinc-300 hover:border-zinc-500"}`}>
-                    {displaySentence}{" "}<span className="font-medium">{item.token.trim()}</span>
+                    {displaySentence}{" "}<span className="font-medium">{item.token.replace(/Ġ+/g, " ")}</span>
                     <span className="ml-2 text-xs text-zinc-400">({(item.probability * 100).toFixed(1)}%)</span>
                   </button>
                 )
