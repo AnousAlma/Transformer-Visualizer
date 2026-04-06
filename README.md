@@ -124,7 +124,27 @@ Then open [http://localhost:3000](http://localhost:3000) in your browser.
 
 4. Switch the language using the **language dropdown** at the top
 
+---
+
 ### Screenshots
+
+
+#### Tokenization
+![Tokenization](./notes/tokenizationScreen.png)
+
+#### Embeddings
+![Embeddings](./notes/embeddingScreen.png)
+
+#### Self-Attention
+![Self-Attention](./notes/selfAttentionScreen.png)
+
+#### Calculating Probabilities
+![Probabilities](./notes/calculatingProbScreen.png)
+
+#### Output With Hallucination Metric
+![Output](./notes/outputScreen.png)
+
+
 
 
 
