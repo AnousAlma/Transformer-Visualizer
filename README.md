@@ -1,6 +1,6 @@
 # TransformerVisualizer
 
-An educational platform inspired by Transformer Explainer, built by Amaan Farooqi, Anas Almasri, Fares Alkorani, Joshua Ramnauth, and Rithika Yerra as part of CSC392H5 at the University of Toronto Mississauga, supervised by Professor Mohammad Mahmoud.
+An educational platform inspired by Transformer Explainer, built by Amaan Farooqi, Anas Almasri, Fares Alkorani, Joshua Ramnauth, and Rithika Yerra as part of CSC392H5 at the University of Toronto Mississauga, under the supervision of Professor Mohammad Mahmoud.
 
 
 ## About The Project
@@ -146,8 +146,17 @@ Then open [http://localhost:3000](http://localhost:3000) in your browser.
 
 
 
+## License
+
+Distributed under the MIT License.
 
 
+---
 
+## Acknowledgements
+
+* Inspired by [Transformer Explainer](https://poloclub.github.io/transformer-explainer/)
+* [TransformerLens](https://github.com/TransformerLensOrg/TransformerLens)
+* [Groq](https://groq.com)
 
 
